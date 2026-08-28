@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
@@ -7,6 +8,11 @@ from app import trace
 from app.models import Entities, Plan, PlanStep, ToolResult
 from app.tools import invoke, load_all
 from app.incident.commander import handle_incident
+
+log = logging.getLogger(__name__)
+
+# Maximum times a validation failure can trigger self-correct before we escalate
+MAX_VALIDATION_SELF_CORRECTS = 2
 
 
 def _dig(obj: Any, parts: list[str]) -> Any:
@@ -80,6 +86,7 @@ def _self_correct(wid: str, entities: dict, outputs: dict, validation: dict) -> 
         step_id="s3",
         payload={"exclude_ids": exclude, "errors": validation.get("errors")},
     )
+    log.info("[SELF_CORRECT] excluding suppliers %s", exclude)
     quotes = outputs.get("s1") or {}
     result = invoke(
         "rank_suppliers",
@@ -88,6 +95,7 @@ def _self_correct(wid: str, entities: dict, outputs: dict, validation: dict) -> 
             "budget": entities.get("budget"),
             "currency": entities.get("currency"),
             "quantity": entities.get("quantity"),
+            "requested_item": entities.get("item"),
             "exclude_ids": exclude,
         },
     )
@@ -119,9 +127,17 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
     ent = entities.model_dump()
     ent.setdefault("extra", {})
     ent["extra"]["workflow_id"] = wid
+
+    log.info(
+        "[REQUEST] wid=%s item='%s' qty=%d budget=%s currency=%s",
+        wid, ent.get("item"), ent.get("quantity"), ent.get("budget"), ent.get("currency"),
+    )
+
     outputs: dict[str, Any] = {}
     statuses: dict[str, str] = {s.id: "pending" for s in plan.steps}
     tools_used: list[str] = []
+    # Track how many times we've called handle_incident for validation on this run
+    _validation_incident_count = 0
 
     for step in plan.steps:
         trace.upsert_step(wid, step.id, name=step.name, tool=step.tool, status="pending")
@@ -163,6 +179,11 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
             inputs["tools_used"] = tools_used
             inputs.setdefault("status", "pending_approval")
 
+        # ── Inject requested_item into rank_suppliers calls ───────────────────
+        if step.tool == "rank_suppliers" and isinstance(inputs, dict):
+            if "requested_item" not in inputs:
+                inputs["requested_item"] = ent.get("item")
+
         result = ToolResult(ok=False, tool=step.tool, error="not invoked")
         attempts = max(int(step.max_retries or 0), 0) + 1
         for attempt in range(1, attempts + 1):
@@ -188,12 +209,13 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
             )
             if result.ok:
                 break
-            
-            # Pass to incident commander if not ok
+
+            # ── Incident handling — bounded to prevent infinite loops ──────────
             action = handle_incident(wid, step.id, result, attempt, attempts)
-            
+
             if action == "REPLAN":
-                # We need to break out and restart the execution loop with the new plan
+                # No longer triggered by validation failures (fixed in policies.py)
+                # But handle it if it ever fires for other reasons
                 return "REPLAN"
             elif action == "RETRY":
                 if attempt < attempts:
@@ -202,13 +224,11 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
             elif action == "ESCALATE":
                 break
             elif action == "FALLBACK":
-                # Inject a hint to use fallback in inputs
                 if isinstance(inputs, dict):
                     if "chaos" not in inputs or not isinstance(inputs.get("chaos"), dict):
                         inputs["chaos"] = {}
                     inputs["chaos"]["use_fallback"] = True
                 trace.emit(wid, "FALLBACK_ACTIVATED", "Falling back to bundled catalog", step_id=step.id)
-                # Try one more time with fallback
                 step_result = invoke(step.tool, inputs if isinstance(inputs, dict) else {})
                 trace.record_tool_call(wid, step.id, step.tool, inputs, step_result.model_dump(), step_result.ok, step_result.latency_ms)
                 if step_result.ok:
@@ -225,20 +245,24 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
         elif result.ok:
             outputs[step.id] = data
 
+        # ── Validation step special handling ──────────────────────────────────
         if step.tool == "validate_selection" and isinstance(data, dict):
             trace.emit(wid, "validation", "Selection validation " + ("passed" if data.get("passed") else "failed"), step_id=step.id, payload=data)
             if not data.get("passed") and data.get("action") == "retry_rank":
-                data = _self_correct(wid, ent, outputs, data)
-                outputs[step.id] = data
+                # Inline self-correct — bounded by MAX_VALIDATION_SELF_CORRECTS
+                if _validation_incident_count < MAX_VALIDATION_SELF_CORRECTS:
+                    _validation_incident_count += 1
+                    log.info("[SELF_CORRECT] attempt %d/%d", _validation_incident_count, MAX_VALIDATION_SELF_CORRECTS)
+                    data = _self_correct(wid, ent, outputs, data)
+                    outputs[step.id] = data
+                else:
+                    log.warning("[SELF_CORRECT] Max attempts reached (%d). Escalating.", MAX_VALIDATION_SELF_CORRECTS)
+                    trace.emit(wid, "log", f"Self-correct limit reached ({MAX_VALIDATION_SELF_CORRECTS}) — escalating", step_id=step.id)
 
         if not result.ok or (step.tool == "validate_selection" and isinstance(data, dict) and not data.get("passed")):
             if step.tool == "validate_selection" and isinstance(data, dict) and not data.get("passed"):
-                # Use Incident Commander to see if we replan or escalate
-                v_res = ToolResult(ok=False, tool="validate_selection", error="; ".join(data.get("errors") or []), error_type="VALIDATION_FAILURE")
-                action = handle_incident(wid, step.id, v_res, 1, 1)
-                if action == "REPLAN":
-                    return "REPLAN"
-                    
+                # ── Bounded: do NOT call handle_incident again for validation ────
+                # This prevents the incident count explosion
                 statuses[step.id] = "failed"
                 trace.upsert_step(wid, step.id, status="failed", output=data, error="; ".join(data.get("errors") or []), finished=True)
                 trace.emit(wid, "escalated", "Validation could not be satisfied — escalating to a human", step_id=step.id, payload=data)
@@ -248,13 +272,12 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
                 from app.impact import calculate_impact
                 trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
                 return "escalated"
-                
+
             if step.on_fail == "skip":
                 statuses[step.id] = "skipped"
                 trace.upsert_step(wid, step.id, status="skipped", error=result.error, finished=True)
                 continue
-            
-            # Since IncidentCommander was called during the retry loop, if we are here and not ok, it means we exhausted retries or chose escalate
+
             statuses[step.id] = "failed"
             trace.upsert_step(wid, step.id, status="failed", error=result.error, finished=True)
             trace.set_workflow_fields(wid, status="escalated", error=result.error)

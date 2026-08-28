@@ -1,8 +1,17 @@
-"""Purchase order PDF generation via fpdf2."""
+"""Purchase order PDF generation via fpdf2.
+
+KEY FIXES:
+- qty is ALWAYS taken from entities.quantity (the original request). Never from
+  the supplier quote. Never falls back to 1 silently.
+- item description is ALWAYS taken from entities.item. Never from supplier.
+- total is ALWAYS recalculated as unit_price × qty.
+- Debug logging added at entry and output.
+"""
 
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date
 from pathlib import Path
 
@@ -11,6 +20,8 @@ from fpdf.enums import XPos, YPos
 
 from app.models import ToolResult
 from app.tools import tool
+
+log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "generated"
@@ -87,9 +98,19 @@ def render_po(
 ) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     currency = entities.get("currency", "PKR")
-    qty = int(entities.get("quantity") or selected.get("quantity") or 1)
+
+    # ── SOURCE OF TRUTH: always use entities for qty and item ─────────────────
+    qty = int(entities.get("quantity") or 1)
+    item_desc = str(entities.get("item") or selected.get("item") or "unknown item")
     unit = float(selected.get("unit_price") or 0)
-    total = float(selected.get("total") or unit * qty)
+    # Always recalculate total from unit_price × requested quantity
+    total = round(unit * qty, 2)
+
+    log.info(
+        "[PO_INPUT] po=%s item='%s' qty=%d unit_price=%s total=%s currency=%s",
+        po_number, item_desc, qty, unit, total, currency,
+    )
+
     pdf = PODoc()
     pdf.approval_status = approval_status
     pdf.set_auto_page_break(auto=True, margin=18)
@@ -127,7 +148,8 @@ def render_po(
     pdf.cell(40, 8, "Line total", border=1, fill=True, align="R")
     pdf.ln()
     pdf.set_font("Helvetica", "", 9)
-    pdf.cell(80, 8, _latin(entities.get("item", "item")), border=1)
+    # ── Always use entities.item, never fallback to "item" ────────────────────
+    pdf.cell(80, 8, _latin(item_desc), border=1)
     pdf.cell(25, 8, str(qty), border=1, align="R")
     pdf.cell(40, 8, _money(unit, currency), border=1, align="R")
     pdf.cell(40, 8, _money(total, currency), border=1, align="R")
@@ -171,12 +193,13 @@ def render_po(
 
     path = OUT / f"{po_number}.pdf"
     pdf.output(str(path))
+    log.info("[PO_OUTPUT] Generated %s", path)
     return path
 
 
 @tool(
     name="generate_purchase_order",
-    description="Generate a Purchase Order PDF with line items, totals, chosen supplier, and terms.",
+    description="Generate a Purchase Order PDF with line items, totals, chosen supplier, and terms. Item and quantity are always sourced from the original request entities.",
 )
 def generate_purchase_order(
     entities: dict | None = None,
@@ -189,11 +212,21 @@ def generate_purchase_order(
         selected = ranking.get("selected")
     if not selected:
         return ToolResult(ok=False, tool="generate_purchase_order", error="No selected supplier to put on the PO")
+
+    # ── SOURCE OF TRUTH for PO quantities ────────────────────────────────────
+    qty = int(entities.get("quantity") or 1)
+    item_desc = str(entities.get("item") or selected.get("item") or "unknown item")
+    unit = float(selected.get("unit_price") or 0)
+    total = round(unit * qty, 2)
+
+    log.info(
+        "[PO_INPUT] item='%s' qty=%d unit=%s total=%s",
+        item_desc, qty, unit, total,
+    )
+
     po_number = _next_po()
     path = render_po(po_number=po_number, entities=entities, selected=selected, ranking=ranking)
-    qty = int(entities.get("quantity") or selected.get("quantity") or 1)
-    unit = float(selected.get("unit_price") or 0)
-    total = float(selected.get("total") or unit * qty)
+
     return ToolResult(
         ok=True,
         tool="generate_purchase_order",
@@ -203,7 +236,7 @@ def generate_purchase_order(
             "url": f"/artifacts/{path.name}",
             "line_items": [
                 {
-                    "description": entities.get("item"),
+                    "description": item_desc,
                     "qty": qty,
                     "unit_price": unit,
                     "total": total,

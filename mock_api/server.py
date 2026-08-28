@@ -1,3 +1,10 @@
+"""OrchestrAI Mock Vendor API.
+
+KEY FIX: Dynamic catalog generation preserves the ORIGINAL item name passed
+by the client. The item field in returned quotes is always the requested item,
+not a normalized snake_case key.
+"""
+
 from __future__ import annotations
 
 import json
@@ -21,6 +28,7 @@ def _load(name: str) -> list[dict]:
 
 CATALOGS = {
     "laptops": _load("laptops.json"),
+    "laptop": _load("laptops.json"),
     "software_subscription": _load("software_vendors.json"),
     "software": _load("software_vendors.json"),
     "vendor": _load("software_vendors.json"),
@@ -28,28 +36,47 @@ CATALOGS = {
 
 
 def _catalog_for(item: str, budget: float | None = None, quantity: int = 1) -> list[dict]:
+    """
+    Return a list of supplier records for `item`.
+    Static catalogs are used ONLY for laptops/software. Everything else gets
+    dynamically generated quotes that preserve the original item name.
+    """
+    # Normalize for catalog lookup only
     key = (item or "").strip().lower().replace(" ", "_")
+
     if key in CATALOGS:
-        return CATALOGS[key]
-    
-    # Generate dynamic catalog on the fly
-    import random
+        # Use static catalog, but overwrite item with original name
+        records = []
+        for raw in CATALOGS[key]:
+            rec = dict(raw)
+            rec["item"] = item  # ← preserve original item name
+            records.append(rec)
+        return records
+
+    # Dynamic generation — use the ORIGINAL item name (not key)
+    base_price = (budget / quantity) * 0.9 if (budget and quantity) else 100_000.0
+    supplier_names = [
+        f"Global {item.title()} Supplies",
+        f"Tech {item.title()} Distributors",
+        f"Mega {item.title()} Corp",
+        f"Prime {item.title()} Solutions",
+    ]
+    delivery_options = [5, 7, 10, 14]
+    warranty_options = [12, 24, 36]
     out = []
-    base_price = (budget / quantity) * 0.9 if budget else 100000.0
-    names = [f"Global {str(item).title()} Supplies", f"Tech {str(item).title()} Distributors", f"Mega {str(item).title()}"]
-    for i, name in enumerate(names):
-        unit_price = base_price * random.uniform(0.8, 1.1)
+    for i, name in enumerate(supplier_names):
+        unit_price = round(base_price * random.uniform(0.80, 1.15), 2)
         rec = {
-            "id": f"mock_{i}",
+            "id": f"dyn_{i}",
             "name": name,
-            "sku": f"MOCK-{key[:3].upper()}-{i}",
-            "item": item,
+            "sku": f"DYN-{key[:6].upper()}-{i:02d}",
+            "item": item,           # ← ORIGINAL item name
             "unit_price": unit_price,
             "currency": "PKR",
-            "delivery_days": random.randint(3, 14),
-            "warranty_months": random.choice([12, 24, 36]),
+            "delivery_days": delivery_options[i % len(delivery_options)],
+            "warranty_months": warranty_options[i % len(warranty_options)],
             "rating": round(random.uniform(4.0, 5.0), 1),
-            "notes": f"Generated mock quote for {item}"
+            "notes": f"Dynamic quote for {item}",
         }
         out.append(rec)
     return out
@@ -100,19 +127,21 @@ def quotes(
         if n == 1:
             return JSONResponse({"unexpected": True, "payload": "<<<not-json-quotes>>> (multi 2)"}, status_code=200)
 
+    catalog_rows = _catalog_for(item, budget=budget, quantity=quantity)
     rows = []
-    for i, raw in enumerate(_catalog_for(item, budget=budget, quantity=quantity)[: max(limit, 3)]):
+    for i, raw in enumerate(catalog_rows[: max(limit, 3)]):
         rec = dict(raw)
-        rec["quantity"] = quantity
-        rec["total"] = rec["unit_price"] * quantity
+        # ── Data integrity: always use the requested quantity and item ────────
+        rec["item"] = item          # ← ORIGINAL item name
+        rec["quantity"] = quantity  # ← requested quantity
+        rec["total"] = round(float(rec["unit_price"]) * quantity, 2)
         if fail == "over_budget":
             rec["unit_price"] = rec["unit_price"] * 5
-            rec["total"] = rec["unit_price"] * quantity
+            rec["total"] = round(float(rec["unit_price"]) * quantity, 2)
             rec["notes"] = (rec.get("notes") or "") + " [CHAOS] prices inflated 5x"
         if fail == "price_shock" and i % 2 == 0:
-            # Inject a price shock on every other item to violate budget/policies for some but not all
             rec["unit_price"] = rec["unit_price"] * 3
-            rec["total"] = rec["unit_price"] * quantity
+            rec["total"] = round(float(rec["unit_price"]) * quantity, 2)
             rec["notes"] = (rec.get("notes") or "") + " [CHAOS] price shock applied"
         rows.append(rec)
 

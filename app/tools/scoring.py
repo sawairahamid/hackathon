@@ -1,14 +1,27 @@
-"""Transparent weighted ranking. The LLM never picks the supplier."""
+"""Transparent weighted ranking. The LLM never picks the supplier.
+
+KEY FIX: quantity is always taken from the ranking call's `quantity` parameter
+(which comes from entities), never from the supplier quote's quantity field.
+This prevents a supplier returning qty=1 from corrupting the total.
+"""
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.models import ToolResult
 from app.tools import tool
 from app.policies import default_policy_engine
 
+log = logging.getLogger(__name__)
+
 DEFAULT_WEIGHTS = {"price": 0.5, "delivery": 0.3, "warranty": 0.2}
+
+
+def _normalize_item(s: str) -> str:
+    """Lowercase + replace underscores/hyphens with spaces for item comparison."""
+    return (s or "").strip().lower().replace("_", " ").replace("-", " ")
 
 
 def _money(n: float, currency: str) -> str:
@@ -24,22 +37,30 @@ def rank(
     quantity: int = 1,
     weights: dict[str, float] | None = None,
     exclude_ids: list[str] | None = None,
+    requested_item: str | None = None,
 ) -> dict[str, Any]:
     weights = dict(weights or DEFAULT_WEIGHTS)
     exclude = set(exclude_ids or [])
     usable = []
     for q in quotes:
         rec = dict(q)
-        rec["total"] = rec.get("total") or rec.get("unit_price", 0) * quantity
-        
+        # ── Data integrity: enforce requested quantity on every quote ─────────
+        rec["quantity"] = int(quantity)
+        unit = float(rec.get("unit_price") or 0)
+        rec["total"] = round(unit * quantity, 2)
+
+        # ── Data integrity: enforce requested item on every quote ─────────────
+        if requested_item:
+            rec["item"] = requested_item
+
         pol_budget_ok, pol_budget_msg = default_policy_engine.evaluate_budget(currency, rec["total"])
         local_budget_ok = rec["total"] <= budget
         rec["meets_budget"] = pol_budget_ok and local_budget_ok
-        
+
         pol_sup_ok, pol_sup_msg = default_policy_engine.evaluate_supplier(rec)
         rec["meets_policy"] = pol_sup_ok
         rec["policy_reason"] = pol_sup_msg
-        
+
         if rec["id"] in exclude:
             rec["excluded"] = True
         usable.append(rec)
@@ -76,7 +97,7 @@ def rank(
                     "name": q.get("name"),
                     "reason": f"Total {_money(q['total'], currency)} exceeds budget {_money(budget, currency)} or policy maximum",
                     "total": q["total"],
-                    "scores": q["scores"]
+                    "scores": q["scores"],
                 }
             )
             continue
@@ -87,7 +108,7 @@ def rank(
                     "name": q.get("name"),
                     "reason": q.get("policy_reason", "Failed business policy"),
                     "total": q["total"],
-                    "scores": q["scores"]
+                    "scores": q["scores"],
                 }
             )
             continue
@@ -128,7 +149,7 @@ def rank(
 
 @tool(
     name="rank_suppliers",
-    description="Filter quotes against the budget ceiling and rank remaining suppliers with disclosed weights (price 50 / delivery 30 / warranty 20). Deterministic — no LLM.",
+    description="Filter quotes against the budget ceiling and rank remaining suppliers with disclosed weights (price 50 / delivery 30 / warranty 20). Deterministic — no LLM. Always enforces requested quantity.",
 )
 def rank_suppliers(
     quotes: list[dict] | dict | None = None,
@@ -137,12 +158,32 @@ def rank_suppliers(
     quantity: int = 1,
     weights: dict | None = None,
     exclude_ids: list[str] | None = None,
+    requested_item: str | None = None,
 ) -> ToolResult:
     if isinstance(quotes, dict):
+        # Extract the original item for enforcement
+        if not requested_item:
+            requested_item = quotes.get("item")
         quotes = quotes.get("quotes") or quotes.get("ranked") or []
     quotes = list(quotes or [])
-    data = rank(quotes, float(budget), currency, int(quantity), weights, exclude_ids)
+
+    log.info(
+        "[RANKING_INPUT] item='%s' quantity=%d budget=%s quotes=%d",
+        requested_item, quantity, budget, len(quotes),
+    )
+
+    data = rank(quotes, float(budget), currency, int(quantity), weights, exclude_ids, requested_item)
     ok = data["selected"] is not None
+
+    if ok:
+        sel = data["selected"]
+        log.info(
+            "[SELECTED_SUPPLIER] name='%s' item='%s' qty=%d unit_price=%s total=%s",
+            sel.get("name"), sel.get("item"), sel.get("quantity"), sel.get("unit_price"), sel.get("total"),
+        )
+    else:
+        log.warning("[RANKING] No supplier selected — all rejected")
+
     return ToolResult(
         ok=ok,
         tool="rank_suppliers",

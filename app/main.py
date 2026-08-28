@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import uuid
 from pathlib import Path
@@ -24,6 +25,14 @@ from app.tools import load_all, registered
 from app import domain_ext  # noqa: F401 — registers UC3/UC4 tools + patches parser/planner
 
 load_dotenv()
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "static"

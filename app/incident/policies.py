@@ -1,8 +1,21 @@
 from __future__ import annotations
 
-def determine_recovery(error_type: str, severity: str, attempt: int, max_retries: int, step_id: str) -> tuple[str, str]:
+
+def determine_recovery(
+    error_type: str,
+    severity: str,
+    attempt: int,
+    max_retries: int,
+    step_id: str,
+) -> tuple[str, str]:
     """
-    Returns (Action, Reason)
+    Returns (Action, Reason).
+
+    KEY FIX: VALIDATION_FAILURE on s3 no longer triggers REPLAN.
+    Replanning doesn't fix structural data mismatches (e.g. item name normalization).
+    Instead: retry_rank is handled inline by executor._self_correct; after that, ESCALATE.
+
+    This prevents the infinite REPLAN → re-run → same failure → REPLAN loop.
     """
     if error_type in ("TOOL_TIMEOUT", "INVALID_TOOL_RESPONSE"):
         if attempt < max_retries:
@@ -15,10 +28,9 @@ def determine_recovery(error_type: str, severity: str, attempt: int, max_retries
         return "FALLBACK", "Falling back to bundled catalog after HTTP failure"
 
     if error_type in ("BUDGET_VIOLATION", "VALIDATION_FAILURE"):
-        # For validation failures, we should REPLAN if possible
-        if step_id.startswith("s3"):  # validation step
-            return "REPLAN", f"{error_type} detected at validation; replanning workflow"
-        return "ESCALATE", f"Cannot recover from {error_type} at this stage"
+        # Do NOT replan — self-correction is handled inline by executor._self_correct.
+        # Replanning on a structural mismatch causes an infinite loop.
+        return "ESCALATE", f"{error_type} — escalating to human review after inline self-correct"
 
     if severity == "CRITICAL":
         return "ESCALATE", "Critical severity incident requires human intervention"

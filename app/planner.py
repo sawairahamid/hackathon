@@ -58,6 +58,7 @@ def template_plan(entities: Entities) -> Plan:
                 "budget": "$entities.budget",
                 "currency": "$entities.currency",
                 "quantity": "$entities.quantity",
+                "requested_item": "$entities.item",
             },
             depends_on=["s1"],
             condition=StepCondition(type="output_nonempty", step="s1"),
