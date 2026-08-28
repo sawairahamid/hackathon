@@ -1,0 +1,36 @@
+# Render.com deployment manifest
+# https://render.com/docs/blueprint-spec
+#
+# SQLite note: Render's free tier uses an ephemeral filesystem.
+# Add a Render Disk (250 MB minimum) mounted at /app/data to persist the DB
+# across deploys, or set DATABASE_PATH to a mounted path.
+
+services:
+  - type: web
+    name: orchestrai
+    runtime: docker
+    plan: free        # upgrade to 'starter' for a persistent disk
+    region: oregon
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_PATH
+        value: "data/orchestrai.db"
+      - key: SUPPLIER_API_URL
+        value: "http://127.0.0.1:8001"
+      - key: GEMINI_API_KEY
+        sync: false          # set in Render dashboard
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false
+    healthCheckPath: /api/health
+    # Uncomment to add a persistent disk (prevents DB loss on redeploy):
+    # disk:
+    #   name: orchestrai-data
+    #   mountPath: /app/data
+    #   sizeGB: 1

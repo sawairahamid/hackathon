@@ -42,7 +42,7 @@ Do **not** enable billing on the Google Cloud project that holds the Gemini key 
 
 | Brief § | Implementation |
 |---|---|
-| 4.1 Intent & decomposition | `app/parser.py` + visible DAG in the UI |
+| 4.1 Intent & decomposition | `app/parser.py` + `app/domain_ext.py` — extended heuristic for 4 domains |
 | 4.2 Orchestration | `app/executor.py` — sequential + conditional, step states, retries |
 | 4.3 Tool layer | HTTP vendor API, PDF generator, approval queue — all logged |
 | 4.4 Decision logic | Disclosed weights: price 50 / delivery 30 / warranty 20 |
@@ -51,6 +51,9 @@ Do **not** enable billing on the Google Cloud project that holds the Gemini key 
 | 4.7 Reporting | Plain-language stakeholder report |
 | 4.8 Observability | SQLite audit log + SSE live trace |
 | Use case 2 | Software vendor renewal under $20,000 — same agent, new catalog data |
+| Use case 3 | Travel expense reimbursement — `app/tools/reimbursement.py`, `mock_api/data/expense_policy.json` |
+| Use case 4 | Employee onboarding — `app/tools/onboarding.py` (accounts + equipment PDF) |
+| Slack notifications | `app/tools/notify.py` — fires on `submit_for_approval`; no-op if `SLACK_WEBHOOK_URL` unset |
 
 ## Architecture
 
@@ -92,3 +95,18 @@ DEMO.md         spoken demo script
 - Mocked vendor data is labeled as simulated (latency is real HTTP).
 - API keys, if used, live in `.env` only — never in client code.
 - Adding a fourth supplier source is a new JSON file under `mock_api/data/` plus one catalog key. The agent core does not change.
+- **Domain generalization**: the same executor core handles 4 distinct business domains (procurement, vendor comparison, expense reimbursement, employee onboarding) via additive `app/domain_ext.py` — no changes to protected files.
+
+## Bonus: Slack notifications
+
+Set `SLACK_WEBHOOK_URL` in `.env` (or as an env var in production) to receive a Slack message each time a workflow hits the human approval gate.
+
+```
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../xxx
+```
+
+Go to **Your Slack workspace → Apps → Incoming Webhooks** to generate a URL. The demo works without it — the tool logs the message and returns `ok=True` if the URL is unset.
+
+## Deployment
+
+See [DEPLOY.md](DEPLOY.md) for Docker and Render.com instructions.

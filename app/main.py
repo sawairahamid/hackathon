@@ -21,6 +21,7 @@ from app.models import ApprovalDecision, CreateWorkflowRequest
 from app.parser import parse_request
 from app.planner import plan_workflow
 from app.tools import load_all, registered
+from app import domain_ext  # noqa: F401 — registers UC3/UC4 tools + patches parser/planner
 
 load_dotenv()
 

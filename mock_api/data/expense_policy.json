@@ -1,0 +1,35 @@
+{
+  "version": "2026-Q3",
+  "description": "OrchestrAI Corporate Expense Policy - per-trip limits (USD)",
+  "categories": {
+    "meals": {
+      "label": "Meals & Dining",
+      "limit_per_day": 75.0,
+      "currency": "USD",
+      "notes": "Covers breakfast, lunch, dinner. Alcohol not reimbursable."
+    },
+    "lodging": {
+      "label": "Lodging / Hotel",
+      "limit_per_night": 200.0,
+      "currency": "USD",
+      "notes": "Standard room rate. Upgrades not covered."
+    },
+    "transport": {
+      "label": "Transportation",
+      "limit_per_trip": 500.0,
+      "currency": "USD",
+      "notes": "Flights economy class, taxis, rideshare. Personal car at IRS rate."
+    },
+    "incidentals": {
+      "label": "Incidentals",
+      "limit_per_day": 25.0,
+      "currency": "USD",
+      "notes": "Tips, parking, internet, etc."
+    }
+  },
+  "approval_thresholds": {
+    "manager": 500.0,
+    "director": 2000.0,
+    "vp": 10000.0
+  }
+}

@@ -22,54 +22,72 @@
       --blue: #7ab6ff;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; }
     body {
       background-image:
         linear-gradient(rgba(93,255,178,0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(93,255,178,0.03) 1px, transparent 1px);
       background-size: 28px 28px;
     }
-    button, textarea, input { font-family: inherit; }
+    button, textarea, input { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; }
     .top {
-      display: flex; align-items: center; gap: 18px;
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
       padding: 10px 18px; border-bottom: 1px solid var(--line);
       background: rgba(7,9,12,0.92); position: sticky; top: 0; z-index: 5;
     }
     .mark {
-      font-family: "IBM Plex Mono", monospace; font-weight: 600; letter-spacing: 0.08em;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-weight: 600; letter-spacing: 0.08em;
       color: var(--phos); font-size: 13px;
     }
     .mark span { color: var(--muted); font-weight: 400; }
-    .pills { display: flex; gap: 8px; margin-left: auto; }
+    .pills { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
     .pill {
-      font-family: "IBM Plex Mono", monospace; font-size: 11px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px;
       border: 1px solid var(--line); padding: 4px 8px; border-radius: 99px; color: var(--muted);
     }
     .pill.on { border-color: var(--phos); color: var(--phos); background: var(--phos-dim); }
     .pill.off { border-color: var(--alert); color: var(--alert); }
-    .clock { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); }
+    .clock { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; color: var(--muted); }
     .shell {
       display: grid; grid-template-columns: 320px 1fr 340px;
       gap: 12px; padding: 12px; height: calc(100vh - 52px);
     }
-    @media (max-width: 1100px) {
+    /* Responsive: collapse to single column at ≤1120px */
+    @media (max-width: 1120px) {
       .shell { grid-template-columns: 1fr; height: auto; }
+      .col { min-height: unset; }
+      /* Prevent card h2 tab labels from overlapping card content on narrow screens */
+      .card h2 { white-space: normal; word-break: break-word; }
+      .card { min-width: 0; }
+    }
+    /* Extra fix for very small phones (375px) */
+    @media (max-width: 480px) {
+      .top { padding: 8px 12px; gap: 10px; }
+      .shell { padding: 8px; gap: 8px; }
+      .card h2 { font-size: 10px; letter-spacing: 0.1em; }
+      .pills { margin-left: 0; width: 100%; }
+      .mark { font-size: 12px; }
+      .ghost, .go, .tiny { font-size: 11px; }
+      .plan-step { font-size: 12px; }
+      textarea { font-size: 11px; }
     }
     .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
     .card {
       background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-      display: flex; flex-direction: column; min-height: 0;
+      display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
     }
     .card h2 {
       margin: 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
       color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line);
-      font-family: "IBM Plex Mono", monospace;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+      /* Prevent tab label text from overflowing/clipping into card content */
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .body { padding: 12px 14px; overflow: auto; }
     textarea {
       width: 100%; min-height: 120px; resize: vertical; background: var(--panel-2);
       border: 1px solid var(--line); color: var(--text); padding: 10px; border-radius: 8px;
-      font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.45;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.45;
     }
     .presets { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
     .ghost, .go, .tiny {
@@ -84,7 +102,7 @@
     .go:disabled { opacity: 0.5; cursor: wait; }
     .chaos label {
       display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
-      margin: 4px 0; font-family: "IBM Plex Mono", monospace;
+      margin: 4px 0; font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
     }
     .plan-step {
       display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 8px 0;
@@ -96,8 +114,8 @@
     .dot.done { background: var(--phos); }
     .dot.failed, .dot.skipped { background: var(--alert); }
     .step-name { font-weight: 600; }
-    .step-tool { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); }
-    .trace { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; line-height: 1.5; }
+    .step-tool { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px; color: var(--muted); }
+    .trace { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11.5px; line-height: 1.5; }
     .ev { padding: 4px 0; border-bottom: 1px solid #1a222c; }
     .ev .ts { color: var(--muted); margin-right: 8px; }
     .ev .ty { color: var(--amber); margin-right: 8px; }
@@ -111,8 +129,46 @@
     .no { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; cursor: pointer; }
     a { color: var(--phos); }
     .banner {
-      font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 8px 10px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; padding: 8px 10px;
       border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; color: var(--amber);
+    }
+
+    /* ── Stamp animation (approve / reject overlay) ── */
+    @keyframes stamp-in {
+      0%   { transform: scale(3) rotate(-15deg); opacity: 0; }
+      60%  { transform: scale(0.9) rotate(-6deg); opacity: 1; }
+      80%  { transform: scale(1.05) rotate(-6deg); opacity: 1; }
+      100% { transform: scale(1) rotate(-6deg); opacity: 1; }
+    }
+    .stamp-wrap {
+      position: relative;
+      display: inline-block;
+      margin-top: 12px;
+    }
+    .stamp {
+      display: inline-block;
+      padding: 6px 14px;
+      border: 3px solid currentColor;
+      border-radius: 4px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.92;
+      transform: rotate(-6deg);
+      animation: stamp-in 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    .stamp.approved { color: var(--phos); border-color: var(--phos); }
+    .stamp.rejected { color: var(--alert); border-color: var(--alert); }
+
+    /* ── prefers-reduced-motion: skip stamp-in animation, show final state instantly ── */
+    @media (prefers-reduced-motion: reduce) {
+      .stamp {
+        animation: none;
+        opacity: 0.92;
+        transform: rotate(-6deg);
+      }
     }
   </style>
 </head>
@@ -133,10 +189,12 @@
           <div class="presets">
             <button class="ghost" data-preset="laptops">Primary · 50 laptops / PKR 10M</button>
             <button class="ghost" data-preset="software">Secondary · vendor renewal / $20k</button>
+            <button class="ghost" data-preset="reimburse">Expense · Travel reimbursement</button>
+            <button class="ghost" data-preset="onboarding">Onboarding · New hire setup</button>
           </div>
           <textarea id="prompt">Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.</textarea>
           <div class="chaos">
-            <h2 style="border:0;padding:10px 0 4px;letter-spacing:0.14em;">Chaos / failure injection</h2>
+            <h2 style="border:0;padding:10px 0 4px;letter-spacing:0.14em;white-space:normal;">Chaos / failure injection</h2>
             <label><input type="checkbox" id="c-timeout" /> Force vendor timeout (retry)</label>
             <label><input type="checkbox" id="c-malformed" /> Force malformed payload</label>
             <label><input type="checkbox" id="c-budget" /> Inflate all quotes over budget</label>
@@ -170,7 +228,9 @@
     const $ = (id) => document.getElementById(id);
     const prompts = {
       laptops: "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
-      software: "Our software vendor contract is expiring. Compare 3 renewal/alternative options and recommend one within a $20,000 budget."
+      software: "Our software vendor contract is expiring. Compare 3 renewal/alternative options and recommend one within a $20,000 budget.",
+      reimburse: "Process this employee's travel reimbursement request for Sarah Ahmed: meals $320 (4 days), lodging $750 (3 nights), transport $480. Validate against policy and route for manager approval.",
+      onboarding: "Set up onboarding tasks for a new hire starting next Monday: accounts, equipment request (laptop, monitor, headset, keyboard), welcome email."
     };
     document.querySelectorAll("[data-preset]").forEach(btn => {
       btn.onclick = () => { $("prompt").value = prompts[btn.dataset.preset]; };
@@ -262,10 +322,35 @@
         }
       }
       if (snap.report) html += `<div class="report">${snap.report.replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</div>`;
-      $("report").innerHTML = html;
+      const reportEl = $("report");
+      reportEl.innerHTML = html;
+
+      // Render stamp overlay for approved / rejected decisions
+      if (snap.status === "approved" || snap.status === "rejected") {
+        renderStamp(reportEl, snap.status);
+      }
       const yes = $("btn-yes"), no = $("btn-no");
       if (yes) yes.onclick = () => decide(id, "approve");
       if (no) no.onclick = () => decide(id, "reject");
+    }
+
+    /**
+     * Renders the stamp overlay for approved / rejected states.
+     * CSS @keyframes stamp-in drives the animation.
+     * @media (prefers-reduced-motion: reduce) disables it, showing the final state instantly.
+     */
+    function renderStamp(container, decision) {
+      // Remove any previous stamp so re-renders are clean
+      const old = container.querySelector(".stamp-wrap");
+      if (old) old.remove();
+      if (decision !== "approved" && decision !== "rejected") return;
+      const wrap = document.createElement("div");
+      wrap.className = "stamp-wrap";
+      const stamp = document.createElement("span");
+      stamp.className = `stamp ${decision}`;
+      stamp.textContent = decision === "approved" ? "APPROVED" : "REJECTED";
+      wrap.appendChild(stamp);
+      container.prepend(wrap);
     }
 
     async function decide(id, decision) {
