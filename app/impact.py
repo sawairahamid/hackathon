@@ -11,11 +11,11 @@ def calculate_impact(wid: str) -> dict:
     entities = json.loads(wf.get("entities_json") or "{}")
     budget = entities.get("budget", 0)
     
-    steps = trace.list_steps(wid)
-    tool_calls = trace.list_tool_calls(wid)
-    incidents = trace.list_incidents(wid)
-    actions = trace.list_recovery_actions(wid)
-    events = trace.list_events(wid)
+    steps = trace.safe_query(lambda: trace.list_steps(wid), [])
+    tool_calls = trace.safe_query(lambda: trace.list_tool_calls(wid), [])
+    incidents = trace.safe_query(lambda: trace.list_incidents(wid), [])
+    actions = trace.safe_query(lambda: trace.list_recovery_actions(wid), [])
+    events = trace.safe_query(lambda: trace.list_events(wid), [])
     
     duration_ms = sum(s.get("latency_ms", 0) for s in tool_calls)
     # Count unique steps that used a tool and attempted to execute
