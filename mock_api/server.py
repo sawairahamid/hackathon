@@ -27,15 +27,33 @@ CATALOGS = {
 }
 
 
-def _catalog_for(item: str) -> list[dict]:
+def _catalog_for(item: str, budget: float | None = None) -> list[dict]:
     key = (item or "").strip().lower().replace(" ", "_")
     if key in CATALOGS:
         return CATALOGS[key]
-    if any(w in key for w in ("laptop", "notebook", "computer")):
+    if any(w in key for w in ("laptop", "notebook")):
         return CATALOGS["laptops"]
-    if any(w in key for w in ("software", "vendor", "license", "saas", "renewal", "subscription")):
-        return CATALOGS["software_subscription"]
-    return CATALOGS["laptops"]
+    
+    # Generate dynamic catalog on the fly
+    import random
+    out = []
+    base_price = (budget / 1) * 0.9 if budget else 100000.0
+    for i, name in enumerate(["Global Supplies", "Tech Distributors", "Mega Distributors"]):
+        unit_price = base_price * random.uniform(0.8, 1.1)
+        rec = {
+            "id": f"mock_{i}",
+            "name": name,
+            "sku": f"MOCK-{key[:3].upper()}-{i}",
+            "item": item,
+            "unit_price": unit_price,
+            "currency": "PKR",
+            "delivery_days": random.randint(3, 14),
+            "warranty_months": random.choice([12, 24, 36]),
+            "rating": round(random.uniform(4.0, 5.0), 1),
+            "notes": f"Generated mock quote for {item}"
+        }
+        out.append(rec)
+    return out
 
 
 @app.get("/health")

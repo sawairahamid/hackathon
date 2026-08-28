@@ -23,21 +23,45 @@ def _normalize_item(item: str) -> str:
     key = (item or "").strip().lower()
     if any(w in key for w in ("software", "vendor", "license", "saas", "renewal", "subscription")):
         return "software_subscription"
-    if any(w in key for w in ("laptop", "notebook", "computer")):
+    if any(w in key for w in ("laptop", "notebook")):
         return "laptops"
-    return key.replace(" ", "_") or "laptops"
+    return key.replace(" ", "_")
 
 
-def _local_quotes(item: str, quantity: int) -> list[dict[str, Any]]:
+def _local_quotes(item: str, quantity: int, budget: float | None = None) -> list[dict[str, Any]]:
     key = _normalize_item(item)
-    path = BUNDLED.get(key, BUNDLED["laptops"])
-    rows = json.loads(path.read_text(encoding="utf-8"))
+    if key in BUNDLED:
+        path = BUNDLED[key]
+        rows = json.loads(path.read_text(encoding="utf-8"))
+        out = []
+        for raw in rows:
+            rec = dict(raw)
+            rec["quantity"] = quantity
+            rec["total"] = rec["unit_price"] * quantity
+            rec["meets_budget"] = True
+            out.append(rec)
+        return out
+    
+    import random
     out = []
-    for raw in rows:
-        rec = dict(raw)
-        rec["quantity"] = quantity
-        rec["total"] = rec["unit_price"] * quantity
-        rec["meets_budget"] = True
+    base_price = (budget / quantity) * 0.9 if budget else 100000.0
+    for i, name in enumerate(["Global Supplies", "Tech Distributors", "Mega Distributors"]):
+        unit_price = base_price * random.uniform(0.8, 1.1)
+        rec = {
+            "id": f"mock_{i}",
+            "name": name,
+            "sku": f"MOCK-{key[:3].upper()}-{i}",
+            "item": item,
+            "unit_price": unit_price,
+            "currency": "PKR",
+            "delivery_days": random.randint(3, 14),
+            "warranty_months": random.choice([12, 24, 36]),
+            "rating": round(random.uniform(4.0, 5.0), 1),
+            "notes": f"Generated mock quote for {item}",
+            "quantity": quantity,
+            "total": unit_price * quantity,
+            "meets_budget": True
+        }
         out.append(rec)
     return out
 
