@@ -319,6 +319,25 @@ def get_workflow(wid: str) -> dict[str, Any] | None:
     return dict(row) if row else None
 
 
+def delete_workflow(wid: str) -> bool:
+    row = get_workflow(wid)
+    if not row:
+        return False
+    real = row["id"]
+    with cursor() as cur:
+        for table in (
+            "recovery_actions",
+            "incidents",
+            "approvals",
+            "events",
+            "tool_calls",
+            "steps",
+        ):
+            cur.execute(f"DELETE FROM {table} WHERE workflow_id = ?", (real,))
+        cur.execute("DELETE FROM workflows WHERE id = ?", (real,))
+    return True
+
+
 def list_workflows(limit: int = 30) -> list[dict[str, Any]]:
     with cursor() as cur:
         rows = cur.execute(

@@ -4,8 +4,11 @@ from typing import Any
 
 from app.llm import complete_json
 
-REPORT_PROMPT = """Rewrite the following structured workflow notes as a one-page briefing for a non-technical procurement manager.
-Keep every number exactly as given. Do not invent suppliers or totals. Return JSON {{"report": "markdown string"}}.
+REPORT_PROMPT = """Rewrite the notes as a short briefing for a non-technical manager.
+Do not use markdown, headings, bullets, backticks, or asterisks.
+Use labeled paragraphs: each block starts with a short label, a colon, then 1-3 sentences.
+Keep every number exactly as given. Do not invent suppliers or totals.
+Return JSON {{"report": "plain text"}}.
 
 Notes:
 {notes}
@@ -39,74 +42,74 @@ def build_report(
     rejected = ranking.get("rejected") or []
     weights = ranking.get("weights") or {"price": 0.5, "delivery": 0.3, "warranty": 0.2}
     checks = validation.get("checks") or []
+    qty = entities.get("quantity")
+    item = entities.get("item")
+    budget = _money(entities.get("budget") or 0, currency)
+    status_label = (status or "").replace("_", " ")
 
-    lines = [
-        f"# Workflow completion report",
-        "",
-        f"**Status:** {status.replace('_', ' ').title()}",
-        f"**Request:** {request.strip()}",
-        "",
-        "## What was requested",
-        f"- Item: **{entities.get('item')}**",
-        f"- Quantity: **{entities.get('quantity')}**",
-        f"- Budget ceiling: **{_money(entities.get('budget') or 0, currency)}**",
-        f"- Suppliers to compare: **{entities.get('suppliers_to_compare', 3)}**",
-        f"- Approval owner: **{entities.get('approval_target', 'procurement_manager')}** (human — the agent cannot approve spend)",
-        "",
-        "## Decision",
+    blocks: list[str] = [
+        f"Status: {status_label}.",
+        f"Request: {request.strip()}",
+        (
+            f"What was asked: {qty} × {item} under a {budget} ceiling. "
+            f"{entities.get('suppliers_to_compare', 3)} suppliers compared. "
+            f"{entities.get('approval_target', 'procurement_manager')} must approve spend — the agent cannot."
+        ),
     ]
+
     if selected:
         scores = selected.get("scores") or {}
-        lines += [
-            f"- Selected supplier: **{selected.get('name')}** (`{selected.get('id')}`)",
-            f"- Unit price: {_money(selected.get('unit_price') or 0, currency)}",
-            f"- Total: **{_money(selected.get('total') or 0, currency)}**",
-            f"- Delivery: {selected.get('delivery_days')} days · Warranty: {selected.get('warranty_months')} months · Rating: {selected.get('rating')}",
-            f"- Weighted score: **{scores.get('weighted', '—')}** (price {weights.get('price', 0.5)*100:.0f}% / delivery {weights.get('delivery', 0.3)*100:.0f}% / warranty {weights.get('warranty', 0.2)*100:.0f}%)",
-            "",
-            ranking.get("justification") or "",
-        ]
+        w_price = weights.get("price", 0.5) * 100
+        w_del = weights.get("delivery", 0.3) * 100
+        w_war = weights.get("warranty", 0.2) * 100
+        decision = (
+            f"Decision: {selected.get('name')} was selected at {_money(selected.get('total') or 0, currency)}. "
+            f"Unit price {_money(selected.get('unit_price') or 0, currency)}. "
+            f"Delivery {selected.get('delivery_days')} days, warranty {selected.get('warranty_months')} months. "
+            f"Weighted score {scores.get('weighted', '—')} "
+            f"(price {w_price:.0f}% / delivery {w_del:.0f}% / warranty {w_war:.0f}%)."
+        )
+        just = (ranking.get("justification") or "").strip()
+        if just:
+            decision += " " + just.rstrip(".") + "."
+        blocks.append(decision)
     else:
-        lines.append("- No supplier could be selected under the stated ceiling. Workflow escalated.")
+        blocks.append("Decision: No supplier could be selected under the stated ceiling. The workflow was escalated.")
 
     if rejected:
-        lines += ["", "## Suppliers rejected"]
+        names = []
         for r in rejected:
-            lines.append(f"- **{r.get('name') or r.get('id')}** — {r.get('reason')}")
+            name = r.get("name") or r.get("id") or "A supplier"
+            reason = (r.get("reason") or "did not meet the ceiling").rstrip(".")
+            names.append(f"{name} was dropped because {reason}")
+        blocks.append("Rejected: " + " ".join(s + "." for s in names))
 
     if checks:
-        lines += ["", "## Validation"]
-        for c in checks:
-            mark = "PASS" if c.get("ok") else "FAIL"
-            lines.append(f"- [{mark}] {c.get('name')}: {c.get('detail')}")
+        failed = [c for c in checks if not c.get("ok")]
+        if failed:
+            detail = "; ".join(f"{c.get('name')}: {c.get('detail')}" for c in failed)
+            blocks.append(f"Validation: Checks failed. {detail}")
+        else:
+            blocks.append("Validation: Required checks passed. Budget, quantity, and required fields lined up.")
 
     if po:
-        lines += [
-            "",
-            "## Artifact",
-            f"- PO number: **{po.get('po_number', '—')}**",
-            f"- File: {po.get('url') or po.get('path') or '—'}",
-            f"- Grand total: {_money(po.get('grand_total') or selected.get('total') or 0, currency)}",
-        ]
+        blocks.append(
+            f"Purchase order: {po.get('po_number', '—')} for "
+            f"{_money(po.get('grand_total') or selected.get('total') or 0, currency)}."
+        )
 
     if approval:
-        lines += [
-            "",
-            "## Approval gate",
-            f"- Approval id: {approval.get('id') or approval.get('approval_id') or '—'}",
-            f"- Status: **{(approval.get('status') or status).replace('_', ' ')}**",
-            f"- Approver: {approval.get('approver') or entities.get('approval_target')}",
-        ]
+        appr_status = (approval.get("status") or status or "").replace("_", " ")
+        blocks.append(
+            f"Approval: {appr_status}. Owner is {approval.get('approver') or entities.get('approval_target')}."
+        )
 
     if tools_used:
-        lines += ["", "## Tools invoked", ", ".join(f"`{t}`" for t in tools_used)]
+        blocks.append("Tools used: " + ", ".join(str(t) for t in tools_used) + ".")
 
-    lines += [
-        "",
-        "---",
-        "_Generated by OrchestrAI. Numbers come from deterministic scoring and validation, not from the language model._",
-    ]
-    base = "\n".join(lines).strip() + "\n"
+    blocks.append("Note: Numbers come from deterministic scoring and validation, not from the language model.")
+
+    base = "\n\n".join(blocks).strip() + "\n"
 
     if not llm_polish:
         return base
@@ -114,5 +117,5 @@ def build_report(
     if parsed and isinstance(parsed.get("report"), str) and parsed["report"].strip():
         extra = parsed["report"].strip()
         if "fallback" not in tag:
-            return extra + f"\n\n_Provider: {tag}_\n"
+            return extra + "\n"
     return base
