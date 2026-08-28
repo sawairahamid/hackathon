@@ -102,6 +102,13 @@ def workflows() -> list[dict]:
     return trace.safe_query(trace.list_workflows, [])
 
 
+@app.delete("/api/workflows/{wid}")
+def remove_workflow(wid: str) -> dict:
+    if not trace.delete_workflow(wid):
+        raise HTTPException(404, "workflow not found")
+    return {"ok": True}
+
+
 @app.post("/api/workflows")
 async def create_workflow(body: CreateWorkflowRequest) -> dict:
     chaos = body.chaos.model_dump()
@@ -268,8 +275,8 @@ def decide(wid: str, body: ApprovalDecision) -> dict:
     )
     row = trace.get_workflow(wid)
     report = (row or {}).get("report") or ""
-    stamp = f"\n\n---\n**Human decision:** {status.upper()}" + (f" — {body.note}" if body.note else "") + "\n"
-    if report and "**Human decision:**" not in report:
+    stamp = f"\n\nHuman decision: {status.upper()}" + (f" — {body.note}" if body.note else "") + "\n"
+    if report and "Human decision:" not in report:
         report = report.rstrip() + stamp
         trace.set_workflow_fields(wid, report=report)
         trace.emit(wid, "report_ready", "Report updated with the human decision")
