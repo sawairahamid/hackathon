@@ -11,10 +11,10 @@ PARSER_PROMPT = """You extract structured procurement entities from a business r
 Return JSON with keys:
   intent: "procurement" | "vendor_comparison" | "other"
   item: short catalog name (use "laptops" or "software_subscription" when those fit)
-  quantity: integer
+  quantity: integer (units to buy — not the number of suppliers to list)
   budget: number (the ceiling, expanded — "10 million" = 10000000)
   currency: "PKR" or "USD"
-  suppliers_to_compare: integer (default 3)
+  suppliers_to_compare: integer. Use the number the user asked to show/find/list/compare. "Show me 10 suppliers" = 10. "Show me 10 laptops" = 10 unique quotes. Default 3 ONLY if they did not specify a count. Never clamp a specified count down to 3.
   approval_target: string (default "procurement_manager")
   constraints: string array
 Do not invent a budget of 0. If a million/lakh/thousand suffix is present, expand it.
@@ -34,6 +34,48 @@ def _expand(num: float, suffix: str | None) -> float:
     return num
 
 
+_WORD_NUM = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+    "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+    "nineteen": 19, "twenty": 20,
+}
+_NUM = r"(?:\d+|" + "|".join(_WORD_NUM) + r")"
+
+
+def _to_count(raw: str) -> int:
+    s = (raw or "").strip().lower()
+    if s in _WORD_NUM:
+        return _WORD_NUM[s]
+    return int(s)
+
+
+def _requested_result_count(lower: str) -> int | None:
+    """How many unique supplier/product cards the user asked to see, if any."""
+    patterns = (
+        rf"compare\s+({_NUM})",
+        rf"(?:from|among)\s+({_NUM})\s+suppliers?",
+        rf"(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get)\s+({_NUM})\s+(?:[\w'-]+\s+){{0,4}}suppliers?",
+        rf"({_NUM})\s+suppliers?",
+        rf"(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get)\s+({_NUM})\s+(?:laptops?|notebooks?|quotes?|options?|vendors?)",
+    )
+    for pat in patterns:
+        m = re.search(pat, lower)
+        if not m:
+            continue
+        n = _to_count(m.group(1))
+        if 1 <= n <= 50:
+            return n
+    return None
+
+
+def _is_listing_request(lower: str) -> bool:
+    if not re.search(r"\b(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get)\b", lower):
+        return False
+    return not re.search(r"\b(?:purchase|under|budget|ceiling|compare)\b", lower)
+
+
 def heuristic_parse(text: str) -> Entities:
     raw = text.strip()
     lower = raw.lower()
@@ -48,9 +90,10 @@ def heuristic_parse(text: str) -> Entities:
         if intent == "vendor_comparison" and "laptop" in lower:
             intent = "procurement"
 
+    listing = _is_listing_request(lower)
     qty = 1
     m = re.search(r"(\d+)\s*(?:x\s*)?(laptops?|units?|seats?|licenses?|notebooks?)", lower)
-    if m:
+    if m and not listing:
         qty = int(m.group(1))
     elif intent == "vendor_comparison":
         qty = 1
@@ -76,10 +119,9 @@ def heuristic_parse(text: str) -> Entities:
         budget = _expand(float(under.group(1).replace(",", "")), under.group(2))
         currency = "USD" if "$" in lower and "pkr" not in lower else "PKR"
 
-    n_sup = 3
-    sm = re.search(r"compare\s+(\d+)", lower)
-    if sm:
-        n_sup = int(sm.group(1))
+    n_sup = _requested_result_count(lower)
+    if n_sup is None:
+        n_sup = 3
 
     constraints = []
     if budget:
@@ -125,6 +167,8 @@ def _merge(llm: dict[str, Any], fallback: Entities) -> Entities:
         data["quantity"] = int(data["quantity"])
         data["budget"] = float(data["budget"])
         data["suppliers_to_compare"] = int(data.get("suppliers_to_compare") or 3)
+        if fallback.suppliers_to_compare != 3:
+            data["suppliers_to_compare"] = fallback.suppliers_to_compare
     except (TypeError, ValueError):
         pass
     return Entities.model_validate(data)

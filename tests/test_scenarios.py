@@ -45,6 +45,34 @@ def test_parse_secondary_use_case():
     assert ent.currency == "USD"
 
 
+def test_parse_requested_supplier_counts():
+    cases = [
+        ("Show me 3 suppliers", 3),
+        ("Show me 4 suppliers", 4),
+        ("Show me 5 suppliers", 5),
+        ("Show me 10 suppliers", 10),
+        ("Find 10 laptop suppliers", 10),
+        ("Give me 10 laptop suppliers", 10),
+        ("Show me 10 laptops", 10),
+        ("Find 5 laptops from suppliers", 5),
+        ("Show me 5 laptops from 5 suppliers", 5),
+        ("Give me 15 suppliers", 15),
+        ("Show me laptop suppliers", 3),
+    ]
+    for text, n in cases:
+        ent = heuristic_parse(text)
+        assert ent.suppliers_to_compare == n, text
+
+
+def test_fetch_returns_requested_unique_quotes():
+    from app.tools.suppliers import _local_quotes
+    for n in (3, 4, 5, 10, 15):
+        quotes = _local_quotes("laptops", 1, n)
+        ids = [q["id"] for q in quotes]
+        assert len(quotes) == n, n
+        assert len(set(ids)) == n
+
+
 def test_rank_rejects_over_budget_and_picks_transparent_winner():
     quotes = [
         {"id": "cheap_slow", "name": "A", "unit_price": 100, "total": 5000, "delivery_days": 30, "warranty_months": 12},

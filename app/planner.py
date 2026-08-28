@@ -34,7 +34,7 @@ def template_plan(entities: Entities) -> Plan:
             id="s1",
             name="Fetch supplier quotes",
             tool="fetch_suppliers",
-            description="Call the vendor API for at least 3 quotes (HTTP, with local fallback).",
+            description="Fetch exactly the requested number of unique supplier quotes (default 3).",
             inputs={
                 "item": "$entities.item",
                 "quantity": "$entities.quantity",

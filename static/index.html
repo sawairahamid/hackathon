@@ -1126,6 +1126,11 @@
       rejected.forEach((r) => {
         art += supplierCard(r, cur, "rejected", `<p class="scard-reason">${escapeHtml(r.reason || "Rejected")}</p>`);
       });
+      const shown = (sel ? 1 : 0) + ranked.filter((r) => !(sel && r.id === sel.id)).length + rejected.length;
+      const want = Number(snap.entities?.suppliers_to_compare);
+      if (want && shown && shown < want) {
+        art += `<p class="catalog-note">Showing ${shown} unique matches from the catalog (asked for ${want}).</p>`;
+      }
       $("artifact").innerHTML = art || `<p class="empty">Status: ${escapeHtml((snap.status || "").replaceAll("_", " "))}. Score cards appear after ranking.</p>`;
     }
 

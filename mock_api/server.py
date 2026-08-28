@@ -52,7 +52,7 @@ def catalog() -> dict:
 def quotes(
     item: str = Query(..., min_length=1),
     quantity: int = Query(1, ge=1),
-    limit: int = Query(4, ge=1, le=12),
+    limit: int = Query(3, ge=1, le=50),
     fail: str | None = Query(None),
     extra_latency_ms: int = Query(0, ge=0, le=5000),
 ):
@@ -82,8 +82,15 @@ def quotes(
         if n == 1:
             return JSONResponse({"unexpected": True, "payload": "<<<not-json-quotes>>> (multi 2)"}, status_code=200)
 
+    catalog = _catalog_for(item)
+    want = max(int(limit), 1)
     rows = []
-    for i, raw in enumerate(_catalog_for(item)[: max(limit, 3)]):
+    seen: set[str] = set()
+    for i, raw in enumerate(catalog):
+        vid = str(raw.get("id") or "")
+        if vid in seen:
+            continue
+        seen.add(vid)
         rec = dict(raw)
         rec["quantity"] = quantity
         rec["total"] = rec["unit_price"] * quantity
@@ -97,5 +104,7 @@ def quotes(
             rec["total"] = rec["unit_price"] * quantity
             rec["notes"] = (rec.get("notes") or "") + " [CHAOS] price shock applied"
         rows.append(rec)
+        if len(rows) >= want:
+            break
 
-    return {"ok": True, "item": item, "quantity": quantity, "latency_ms": latency, "quotes": rows}
+    return {"ok": True, "item": item, "quantity": quantity, "latency_ms": latency, "quotes": rows, "available": len(catalog)}
