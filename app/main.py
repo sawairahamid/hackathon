@@ -206,6 +206,30 @@ def decide(wid: str, body: ApprovalDecision) -> dict:
         report = report.rstrip() + stamp
         trace.set_workflow_fields(wid, report=report)
         trace.emit(wid, "report_ready", "Report updated with the human decision")
+        
+    try:
+        if row and row.get("entities_json"):
+            entities = json.loads(row["entities_json"])
+            steps = trace.list_steps(wid)
+            rank_step = next((s for s in steps if s.get("tool") == "rank_suppliers"), None)
+            po_step = next((s for s in steps if s.get("tool") == "generate_purchase_order"), None)
+            if rank_step and rank_step.get("output") and po_step and po_step.get("output"):
+                from app.tools.documents import render_po
+                po_data = po_step["output"]
+                rank_data = rank_step["output"]
+                if "po_number" in po_data and "selected" in rank_data:
+                    render_po(
+                        po_number=po_data["po_number"],
+                        entities=entities,
+                        selected=rank_data["selected"],
+                        ranking=rank_data,
+                        approval_status=status,
+                        approval_note=body.note,
+                    )
+    except Exception as e:
+        import logging
+        logging.error("Failed to re-render PO on approval: %s", e)
+
     return {"approval": rec, "status": status}
 
 
