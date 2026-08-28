@@ -1,0 +1,50 @@
+[
+  {
+    "id": "cloudforge",
+    "name": "CloudForge Suite",
+    "sku": "CF-ENT-ANNUAL",
+    "item": "software_subscription",
+    "unit_price": 15500,
+    "currency": "USD",
+    "delivery_days": 3,
+    "warranty_months": 24,
+    "rating": 4.7,
+    "notes": "Annual seat license, 24-month support, 3-day cutover from incumbent."
+  },
+  {
+    "id": "acmesoft",
+    "name": "AcmeSoft Enterprise",
+    "sku": "AS-RENEW-12",
+    "item": "software_subscription",
+    "unit_price": 18000,
+    "currency": "USD",
+    "delivery_days": 5,
+    "warranty_months": 12,
+    "rating": 4.5,
+    "notes": "Incumbent vendor renewal. Familiar tooling, 12-month support only."
+  },
+  {
+    "id": "nexsuite",
+    "name": "NexSuite Cloud",
+    "sku": "NX-PREMIUM",
+    "item": "software_subscription",
+    "unit_price": 22000,
+    "currency": "USD",
+    "delivery_days": 2,
+    "warranty_months": 36,
+    "rating": 4.6,
+    "notes": "Premium suite with 36-month support. Typically over a $20k ceiling."
+  },
+  {
+    "id": "openalt",
+    "name": "OpenAlt Support",
+    "sku": "OA-STD",
+    "item": "software_subscription",
+    "unit_price": 12000,
+    "currency": "USD",
+    "delivery_days": 14,
+    "warranty_months": 12,
+    "rating": 4.0,
+    "notes": "Lowest cash outlay. 14-day migration window, community-backed support."
+  }
+]

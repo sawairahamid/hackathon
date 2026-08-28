@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OrchestrAI — Agentic workflow execution</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #07090c;
+      --panel: #10151c;
+      --panel-2: #151c25;
+      --line: #243040;
+      --text: #dce6ef;
+      --muted: #7d8b99;
+      --phos: #5dffb2;
+      --phos-dim: #1a3d30;
+      --amber: #ffbf5e;
+      --alert: #ff5d73;
+      --blue: #7ab6ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; }
+    body {
+      background-image:
+        linear-gradient(rgba(93,255,178,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(93,255,178,0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    button, textarea, input { font-family: inherit; }
+    .top {
+      display: flex; align-items: center; gap: 18px;
+      padding: 10px 18px; border-bottom: 1px solid var(--line);
+      background: rgba(7,9,12,0.92); position: sticky; top: 0; z-index: 5;
+    }
+    .mark {
+      font-family: "IBM Plex Mono", monospace; font-weight: 600; letter-spacing: 0.08em;
+      color: var(--phos); font-size: 13px;
+    }
+    .mark span { color: var(--muted); font-weight: 400; }
+    .pills { display: flex; gap: 8px; margin-left: auto; }
+    .pill {
+      font-family: "IBM Plex Mono", monospace; font-size: 11px;
+      border: 1px solid var(--line); padding: 4px 8px; border-radius: 99px; color: var(--muted);
+    }
+    .pill.on { border-color: var(--phos); color: var(--phos); background: var(--phos-dim); }
+    .pill.off { border-color: var(--alert); color: var(--alert); }
+    .clock { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); }
+    .shell {
+      display: grid; grid-template-columns: 320px 1fr 340px;
+      gap: 12px; padding: 12px; height: calc(100vh - 52px);
+    }
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 1fr; height: auto; }
+    }
+    .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .card h2 {
+      margin: 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line);
+      font-family: "IBM Plex Mono", monospace;
+    }
+    .body { padding: 12px 14px; overflow: auto; }
+    textarea {
+      width: 100%; min-height: 120px; resize: vertical; background: var(--panel-2);
+      border: 1px solid var(--line); color: var(--text); padding: 10px; border-radius: 8px;
+      font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.45;
+    }
+    .presets { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+    .ghost, .go, .tiny {
+      cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
+      background: transparent; color: var(--text); text-align: left; padding: 8px 10px; font-size: 12px;
+    }
+    .ghost:hover { border-color: var(--phos); }
+    .go {
+      background: var(--phos); color: #062016; font-weight: 700; text-align: center;
+      letter-spacing: 0.06em; text-transform: uppercase; margin-top: 8px;
+    }
+    .go:disabled { opacity: 0.5; cursor: wait; }
+    .chaos label {
+      display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
+      margin: 4px 0; font-family: "IBM Plex Mono", monospace;
+    }
+    .plan-step {
+      display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 8px 0;
+      border-bottom: 1px dashed var(--line); font-size: 13px;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: #334; }
+    .dot.pending { background: #334; }
+    .dot.in_progress { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+    .dot.done { background: var(--phos); }
+    .dot.failed, .dot.skipped { background: var(--alert); }
+    .step-name { font-weight: 600; }
+    .step-tool { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); }
+    .trace { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; line-height: 1.5; }
+    .ev { padding: 4px 0; border-bottom: 1px solid #1a222c; }
+    .ev .ts { color: var(--muted); margin-right: 8px; }
+    .ev .ty { color: var(--amber); margin-right: 8px; }
+    .grow { flex: 1; }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 8px; font-size: 12px; }
+    .kv b { color: var(--muted); font-weight: 500; }
+    .report { font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
+    .appr { display: flex; gap: 8px; margin-top: 10px; }
+    .appr button { flex: 1; text-align: center; padding: 10px; font-weight: 700; }
+    .yes { background: var(--phos); color: #062016; border: 0; border-radius: 8px; cursor: pointer; }
+    .no { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; cursor: pointer; }
+    a { color: var(--phos); }
+    .banner {
+      font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 8px 10px;
+      border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; color: var(--amber);
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="mark">ORCHESTRAI <span>// AGENTIC EXECUTION</span></div>
+    <div class="clock" id="clock"></div>
+    <div class="pills">
+      <div class="pill" id="pill-api">vendor api …</div>
+      <div class="pill" id="pill-llm">llm …</div>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="col">
+      <div class="card grow">
+        <h2>Request</h2>
+        <div class="body">
+          <div class="presets">
+            <button class="ghost" data-preset="laptops">Primary · 50 laptops / PKR 10M</button>
+            <button class="ghost" data-preset="software">Secondary · vendor renewal / $20k</button>
+          </div>
+          <textarea id="prompt">Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.</textarea>
+          <div class="chaos">
+            <h2 style="border:0;padding:10px 0 4px;letter-spacing:0.14em;">Chaos / failure injection</h2>
+            <label><input type="checkbox" id="c-timeout" /> Force vendor timeout (retry)</label>
+            <label><input type="checkbox" id="c-malformed" /> Force malformed payload</label>
+            <label><input type="checkbox" id="c-budget" /> Inflate all quotes over budget</label>
+          </div>
+          <button class="go" id="run">Execute workflow</button>
+        </div>
+      </div>
+    </section>
+    <section class="col">
+      <div class="card" style="flex: 0 0 42%;">
+        <h2>Plan (shown before execution)</h2>
+        <div class="body" id="plan"><div class="banner">Submit a request. The DAG appears here before any tool runs — that is how judges can tell this is not a scripted demo.</div></div>
+      </div>
+      <div class="card grow">
+        <h2>Live execution trace</h2>
+        <div class="body trace" id="trace"></div>
+      </div>
+    </section>
+    <section class="col">
+      <div class="card">
+        <h2>Selection & artifact</h2>
+        <div class="body" id="artifact"><span style="color:var(--muted)">Waiting for ranking…</span></div>
+      </div>
+      <div class="card grow">
+        <h2>Approval inbox + report</h2>
+        <div class="body" id="report"></div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const prompts = {
+      laptops: "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
+      software: "Our software vendor contract is expiring. Compare 3 renewal/alternative options and recommend one within a $20,000 budget."
+    };
+    document.querySelectorAll("[data-preset]").forEach(btn => {
+      btn.onclick = () => { $("prompt").value = prompts[btn.dataset.preset]; };
+    });
+    setInterval(() => { $("clock").textContent = new Date().toISOString().replace("T"," ").slice(0,19) + "Z"; }, 1000);
+
+    async function health() {
+      try {
+        const h = await (await fetch("/api/health")).json();
+        const api = $("pill-api");
+        api.textContent = h.mock_supplier_api ? "vendor api live :8001" : "vendor api fallback";
+        api.className = "pill " + (h.mock_supplier_api ? "on" : "off");
+        const llm = $("pill-llm");
+        const tag = h.llm.gemini ? "gemini" : h.llm.groq ? "groq" : "template fallback";
+        llm.textContent = "llm " + tag;
+        llm.className = "pill " + (h.llm.gemini || h.llm.groq ? "on" : "");
+      } catch { /* ignore */ }
+    }
+    health(); setInterval(health, 8000);
+
+    let es = null;
+    let currentId = null;
+    const stepState = {};
+
+    function renderPlan(plan, statuses) {
+      if (!plan) return;
+      const html = [`<div class="banner">${plan.title}<br><span style="color:var(--muted)">${plan.summary} · source ${plan.source}</span></div>`];
+      for (const s of plan.steps) {
+        const st = (statuses && statuses[s.id]) || stepState[s.id] || "pending";
+        html.push(`<div class="plan-step"><div class="dot ${st}"></div><div>
+          <div class="step-name">${s.id} · ${s.name}</div>
+          <div class="step-tool">${s.tool}${s.depends_on?.length ? " ← " + s.depends_on.join(", ") : ""}</div>
+        </div></div>`);
+      }
+      $("plan").innerHTML = html.join("");
+    }
+
+    function appendTrace(ev) {
+      const row = document.createElement("div");
+      row.className = "ev";
+      const ts = (ev.ts || "").slice(11, 19);
+      row.innerHTML = `<span class="ts">${ts}</span><span class="ty">${ev.type}</span>${ev.message || ""}`;
+      $("trace").prepend(row);
+      if (ev.step_id && ev.type === "step_started") stepState[ev.step_id] = "in_progress";
+      if (ev.step_id && ev.type === "step_done") stepState[ev.step_id] = "done";
+      if (ev.step_id && (ev.type === "step_failed" || ev.type === "escalated")) stepState[ev.step_id] = "failed";
+    }
+
+    function money(n, c) {
+      if (c === "USD") return "$" + Number(n).toLocaleString();
+      return (c || "PKR") + " " + Number(n).toLocaleString();
+    }
+
+    async function refreshSnapshot(id) {
+      const snap = await (await fetch("/api/workflows/" + id)).json();
+      const plan = snap.plan;
+      const statuses = {};
+      (snap.steps || []).forEach(s => statuses[s.step_id] = s.status);
+      renderPlan(plan, statuses);
+      const ranking = (snap.steps || []).find(s => s.tool === "rank_suppliers");
+      const po = (snap.steps || []).find(s => s.tool === "generate_purchase_order");
+      const sel = ranking?.output?.selected;
+      const rejected = ranking?.output?.rejected || [];
+      let art = "";
+      if (sel) {
+        art += `<div class="kv">
+          <b>Supplier</b><div>${sel.name}</div>
+          <b>Total</b><div>${money(sel.total, ranking.output.currency)}</div>
+          <b>Score</b><div>${sel.scores?.weighted} · 50/30/20 model</div>
+          <b>Delivery</b><div>${sel.delivery_days} days · ${sel.warranty_months} mo warranty</div>
+        </div><p style="font-size:12px;color:var(--muted);margin-top:8px;">${ranking.output.justification || ""}</p>`;
+      }
+      if (rejected.length) {
+        art += `<p style="font-size:12px;margin-top:8px;">Rejected:<br>` + rejected.map(r => `• ${r.name}: ${r.reason}`).join("<br>") + "</p>";
+      }
+      if (po?.output?.url) {
+        art += `<p><a href="${po.output.url}" target="_blank">Open ${po.output.po_number}.pdf</a></p>`;
+      }
+      $("artifact").innerHTML = art || `<span style="color:var(--muted)">Status: ${snap.status}</span>`;
+
+      let html = "";
+      if (snap.status === "pending_approval" || snap.status === "approved" || snap.status === "rejected") {
+        html += `<div class="banner">Human gate · ${snap.status.replaceAll("_"," ")}</div>`;
+        if (snap.status === "pending_approval") {
+          html += `<div class="appr">
+            <button class="yes" id="btn-yes">Approve spend</button>
+            <button class="no" id="btn-no">Reject</button>
+          </div>`;
+        }
+      }
+      if (snap.report) html += `<div class="report">${snap.report.replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</div>`;
+      $("report").innerHTML = html;
+      const yes = $("btn-yes"), no = $("btn-no");
+      if (yes) yes.onclick = () => decide(id, "approve");
+      if (no) no.onclick = () => decide(id, "reject");
+    }
+
+    async function decide(id, decision) {
+      await fetch("/api/workflows/" + id + "/approval", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ decision, note: decision === "approve" ? "Approved at judging table" : "Rejected in demo" })
+      });
+      refreshSnapshot(id);
+    }
+
+    $("run").onclick = async () => {
+      $("run").disabled = true;
+      $("trace").innerHTML = "";
+      Object.keys(stepState).forEach(k => delete stepState[k]);
+      if (es) { es.close(); es = null; }
+      const chaos = {
+        force_timeout: $("c-timeout").checked,
+        force_malformed: $("c-malformed").checked,
+        force_over_budget: $("c-budget").checked,
+        extra_latency_ms: 0
+      };
+      const res = await fetch("/api/workflows", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ request: $("prompt").value, chaos })
+      });
+      const data = await res.json();
+      currentId = data.id;
+      renderPlan(data.plan, {});
+      es = new EventSource("/api/workflows/" + data.id + "/events");
+      es.onmessage = (e) => {
+        const ev = JSON.parse(e.data);
+        appendTrace(ev);
+        if (ev.type === "plan_created") renderPlan(ev.payload, {});
+        if (["step_done","tool_result","report_ready","approval_requested","workflow_completed","escalated","validation"].includes(ev.type)) {
+          refreshSnapshot(data.id);
+        }
+        if (ev.type === "workflow_completed" || ev.type === "workflow_failed") {
+          $("run").disabled = false;
+          refreshSnapshot(data.id);
+        }
+      };
+    };
+  </script>
+</body>
+</html>

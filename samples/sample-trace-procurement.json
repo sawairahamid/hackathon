@@ -1,0 +1,1027 @@
+[
+  {
+    "id": 1,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:02.624Z",
+    "type": "step_started",
+    "step_id": "s1",
+    "message": "Fetch supplier quotes \u00b7 fetch_suppliers",
+    "payload": {}
+  },
+  {
+    "id": 2,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:02.628Z",
+    "type": "tool_called",
+    "step_id": "s1",
+    "message": "Invoking fetch_suppliers (attempt 1/3)",
+    "payload": {
+      "inputs": {
+        "item": "laptops",
+        "quantity": 50,
+        "currency": "PKR",
+        "limit": 3,
+        "budget": 10000000.0,
+        "chaos": {}
+      }
+    }
+  },
+  {
+    "id": 3,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.071Z",
+    "type": "tool_result",
+    "step_id": "s1",
+    "message": "fetch_suppliers ok in 3433 ms",
+    "payload": {
+      "ok": true,
+      "source": "fallback",
+      "error": null
+    }
+  },
+  {
+    "id": 4,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.075Z",
+    "type": "step_done",
+    "step_id": "s1",
+    "message": "Fetch supplier quotes complete",
+    "payload": {
+      "item": "laptops",
+      "quantity": 50,
+      "currency": "PKR",
+      "quotes": [
+        {
+          "id": "bytehub",
+          "name": "ByteHub Supplies",
+          "sku": "BH-PRO-15",
+          "item": "laptops",
+          "unit_price": 175000,
+          "currency": "PKR",
+          "delivery_days": 10,
+          "warranty_months": 36,
+          "rating": 4.8,
+          "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+          "quantity": 50,
+          "total": 8750000
+        },
+        {
+          "id": "techmart",
+          "name": "TechMart Pakistan",
+          "sku": "TM-LAP-14-i5",
+          "item": "laptops",
+          "unit_price": 180000,
+          "currency": "PKR",
+          "delivery_days": 14,
+          "warranty_months": 24,
+          "rating": 4.6,
+          "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+          "quantity": 50,
+          "total": 9000000
+        },
+        {
+          "id": "megaoffice",
+          "name": "MegaOffice Global",
+          "sku": "MO-ULTRA-16",
+          "item": "laptops",
+          "unit_price": 230000,
+          "currency": "PKR",
+          "delivery_days": 7,
+          "warranty_months": 36,
+          "rating": 4.4,
+          "notes": "Premium 16\" spec. Fast delivery but typically exceeds mid-range fleet budgets.",
+          "quantity": 50,
+          "total": 11500000
+        },
+        {
+          "id": "pakcompute",
+          "name": "PakCompute Distributors",
+          "sku": "PC-WORK-14",
+          "item": "laptops",
+          "unit_price": 188000,
+          "currency": "PKR",
+          "delivery_days": 21,
+          "warranty_months": 12,
+          "rating": 4.1,
+          "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+          "quantity": 50,
+          "total": 9400000
+        }
+      ],
+      "fallback_reason": "timed out"
+    }
+  },
+  {
+    "id": 5,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.203Z",
+    "type": "step_started",
+    "step_id": "s2",
+    "message": "Score & rank under budget \u00b7 rank_suppliers",
+    "payload": {}
+  },
+  {
+    "id": 6,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.218Z",
+    "type": "tool_called",
+    "step_id": "s2",
+    "message": "Invoking rank_suppliers (attempt 1/2)",
+    "payload": {
+      "inputs": {
+        "quotes": {
+          "item": "laptops",
+          "quantity": 50,
+          "currency": "PKR",
+          "quotes": [
+            {
+              "id": "bytehub",
+              "name": "ByteHub Supplies",
+              "sku": "BH-PRO-15",
+              "item": "laptops",
+              "unit_price": 175000,
+              "currency": "PKR",
+              "delivery_days": 10,
+              "warranty_months": 36,
+              "rating": 4.8,
+              "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+              "quantity": 50,
+              "total": 8750000
+            },
+            {
+              "id": "techmart",
+              "name": "TechMart Pakistan",
+              "sku": "TM-LAP-14-i5",
+              "item": "laptops",
+              "unit_price": 180000,
+              "currency": "PKR",
+              "delivery_days": 14,
+              "warranty_months": 24,
+              "rating": 4.6,
+              "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+              "quantity": 50,
+              "total": 9000000
+            },
+            {
+              "id": "megaoffice",
+              "name": "MegaOffice Global",
+              "sku": "MO-ULTRA-16",
+              "item": "laptops",
+              "unit_price": 230000,
+              "currency": "PKR",
+              "delivery_days": 7,
+              "warranty_months": 36,
+              "rating": 4.4,
+              "notes": "Premium 16\" spec. Fast delivery but typically exceeds mid-range fleet budgets.",
+              "quantity": 50,
+              "total": 11500000
+            },
+            {
+              "id": "pakcompute",
+              "name": "PakCompute Distributors",
+              "sku": "PC-WORK-14",
+              "item": "laptops",
+              "unit_price": 188000,
+              "currency": "PKR",
+              "delivery_days": 21,
+              "warranty_months": 12,
+              "rating": 4.1,
+              "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+              "quantity": 50,
+              "total": 9400000
+            }
+          ],
+          "fallback_reason": "timed out"
+        },
+        "budget": 10000000.0,
+        "currency": "PKR",
+        "quantity": 50
+      }
+    }
+  },
+  {
+    "id": 7,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.231Z",
+    "type": "tool_result",
+    "step_id": "s2",
+    "message": "rank_suppliers ok in 0 ms",
+    "payload": {
+      "ok": true,
+      "source": "local",
+      "error": null
+    }
+  },
+  {
+    "id": 8,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.245Z",
+    "type": "step_done",
+    "step_id": "s2",
+    "message": "Score & rank under budget complete",
+    "payload": {
+      "weights": {
+        "price": 0.5,
+        "delivery": 0.3,
+        "warranty": 0.2
+      },
+      "rejected": [
+        {
+          "id": "megaoffice",
+          "name": "MegaOffice Global",
+          "reason": "Total PKR 11,500,000 exceeds budget PKR 10,000,000",
+          "total": 11500000
+        }
+      ],
+      "ranked": [
+        {
+          "id": "bytehub",
+          "name": "ByteHub Supplies",
+          "sku": "BH-PRO-15",
+          "item": "laptops",
+          "unit_price": 175000,
+          "currency": "PKR",
+          "delivery_days": 10,
+          "warranty_months": 36,
+          "rating": 4.8,
+          "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+          "quantity": 50,
+          "total": 8750000
+        },
+        {
+          "id": "techmart",
+          "name": "TechMart Pakistan",
+          "sku": "TM-LAP-14-i5",
+          "item": "laptops",
+          "unit_price": 180000,
+          "currency": "PKR",
+          "delivery_days": 14,
+          "warranty_months": 24,
+          "rating": 4.6,
+          "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+          "quantity": 50,
+          "total": 9000000
+        },
+        {
+          "id": "pakcompute",
+          "name": "PakCompute Distributors",
+          "sku": "PC-WORK-14",
+          "item": "laptops",
+          "unit_price": 188000,
+          "currency": "PKR",
+          "delivery_days": 21,
+          "warranty_months": 12,
+          "rating": 4.1,
+          "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+          "quantity": 50,
+          "total": 9400000
+        }
+      ],
+      "selected": {
+        "id": "bytehub",
+        "name": "ByteHub Supplies",
+        "sku": "BH-PRO-15",
+        "item": "laptops",
+        "unit_price": 175000,
+        "currency": "PKR",
+        "delivery_days": 10,
+        "warranty_months": 36,
+        "rating": 4.8,
+        "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+        "quantity": 50,
+        "total": 8750000
+      },
+      "justification": "ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000).",
+      "currency": "PKR",
+      "budget": 10000000.0,
+      "quantity": 50
+    }
+  },
+  {
+    "id": 9,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.375Z",
+    "type": "step_started",
+    "step_id": "s3",
+    "message": "Validate selection \u00b7 validate_selection",
+    "payload": {}
+  },
+  {
+    "id": 10,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.389Z",
+    "type": "tool_called",
+    "step_id": "s3",
+    "message": "Invoking validate_selection (attempt 1/2)",
+    "payload": {
+      "inputs": {
+        "entities": {
+          "intent": "procurement",
+          "item": "laptops",
+          "quantity": 50,
+          "budget": 10000000.0,
+          "currency": "PKR",
+          "suppliers_to_compare": 3,
+          "approval_target": "procurement_manager",
+          "constraints": [
+            "total_cost <= PKR 10,000,000"
+          ],
+          "raw_request": "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
+          "extra": {
+            "workflow_id": "wf_sample_primary",
+            "chaos": {}
+          }
+        },
+        "quotes": {
+          "item": "laptops",
+          "quantity": 50,
+          "currency": "PKR",
+          "quotes": [
+            {
+              "id": "bytehub",
+              "name": "ByteHub Supplies",
+              "sku": "BH-PRO-15",
+              "item": "laptops",
+              "unit_price": 175000,
+              "currency": "PKR",
+              "delivery_days": 10,
+              "warranty_months": 36,
+              "rating": 4.8,
+              "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+              "quantity": 50,
+              "total": 8750000
+            },
+            {
+              "id": "techmart",
+              "name": "TechMart Pakistan",
+              "sku": "TM-LAP-14-i5",
+              "item": "laptops",
+              "unit_price": 180000,
+              "currency": "PKR",
+              "delivery_days": 14,
+              "warranty_months": 24,
+              "rating": 4.6,
+              "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+              "quantity": 50,
+              "total": 9000000
+            },
+            {
+              "id": "megaoffice",
+              "name": "MegaOffice Global",
+              "sku": "MO-ULTRA-16",
+              "item": "laptops",
+              "unit_price": 230000,
+              "currency": "PKR",
+              "delivery_days": 7,
+              "warranty_months": 36,
+              "rating": 4.4,
+              "notes": "Premium 16\" spec. Fast delivery but typically exceeds mid-range fleet budgets.",
+              "quantity": 50,
+              "total": 11500000
+            },
+            {
+              "id": "pakcompute",
+              "name": "PakCompute Distributors",
+              "sku": "PC-WORK-14",
+              "item": "laptops",
+              "unit_price": 188000,
+              "currency": "PKR",
+              "delivery_days": 21,
+              "warranty_months": 12,
+              "rating": 4.1,
+              "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+              "quantity": 50,
+              "total": 9400000
+            }
+          ],
+          "fallback_reason": "timed out"
+        },
+        "ranking": {
+          "weights": {
+            "price": 0.5,
+            "delivery": 0.3,
+            "warranty": 0.2
+          },
+          "rejected": [
+            {
+              "id": "megaoffice",
+              "name": "MegaOffice Global",
+              "reason": "Total PKR 11,500,000 exceeds budget PKR 10,000,000",
+              "total": 11500000
+            }
+          ],
+          "ranked": [
+            {
+              "id": "bytehub",
+              "name": "ByteHub Supplies",
+              "sku": "BH-PRO-15",
+              "item": "laptops",
+              "unit_price": 175000,
+              "currency": "PKR",
+              "delivery_days": 10,
+              "warranty_months": 36,
+              "rating": 4.8,
+              "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+              "quantity": 50,
+              "total": 8750000
+            },
+            {
+              "id": "techmart",
+              "name": "TechMart Pakistan",
+              "sku": "TM-LAP-14-i5",
+              "item": "laptops",
+              "unit_price": 180000,
+              "currency": "PKR",
+              "delivery_days": 14,
+              "warranty_months": 24,
+              "rating": 4.6,
+              "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+              "quantity": 50,
+              "total": 9000000
+            },
+            {
+              "id": "pakcompute",
+              "name": "PakCompute Distributors",
+              "sku": "PC-WORK-14",
+              "item": "laptops",
+              "unit_price": 188000,
+              "currency": "PKR",
+              "delivery_days": 21,
+              "warranty_months": 12,
+              "rating": 4.1,
+              "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+              "quantity": 50,
+              "total": 9400000
+            }
+          ],
+          "selected": {
+            "id": "bytehub",
+            "name": "ByteHub Supplies",
+            "sku": "BH-PRO-15",
+            "item": "laptops",
+            "unit_price": 175000,
+            "currency": "PKR",
+            "delivery_days": 10,
+            "warranty_months": 36,
+            "rating": 4.8,
+            "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+            "quantity": 50,
+            "total": 8750000
+          },
+          "justification": "ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000).",
+          "currency": "PKR",
+          "budget": 10000000.0,
+          "quantity": 50
+        }
+      }
+    }
+  },
+  {
+    "id": 11,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.400Z",
+    "type": "tool_result",
+    "step_id": "s3",
+    "message": "validate_selection ok in 0 ms",
+    "payload": {
+      "ok": true,
+      "source": "local",
+      "error": null
+    }
+  },
+  {
+    "id": 12,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.407Z",
+    "type": "validation",
+    "step_id": "s3",
+    "message": "Selection validation passed",
+    "payload": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "budget_compliance",
+          "ok": true,
+          "detail": "8,750,000 <= 10,000,000 PKR"
+        },
+        {
+          "name": "quantity_correctness",
+          "ok": true,
+          "detail": "qty 50 vs requested 50; total 8,750,000 vs unit\u00d7qty 8,750,000"
+        },
+        {
+          "name": "supplier_consistency",
+          "ok": true,
+          "detail": "selected id=bytehub in quotes=True in ranked=True"
+        },
+        {
+          "name": "required_fields",
+          "ok": true,
+          "detail": "ok"
+        }
+      ],
+      "errors": [],
+      "suggested_exclude_ids": [],
+      "action": "continue",
+      "selected_id": "bytehub"
+    }
+  },
+  {
+    "id": 13,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.420Z",
+    "type": "step_done",
+    "step_id": "s3",
+    "message": "Validate selection complete",
+    "payload": {
+      "passed": true,
+      "checks": [
+        {
+          "name": "budget_compliance",
+          "ok": true,
+          "detail": "8,750,000 <= 10,000,000 PKR"
+        },
+        {
+          "name": "quantity_correctness",
+          "ok": true,
+          "detail": "qty 50 vs requested 50; total 8,750,000 vs unit\u00d7qty 8,750,000"
+        },
+        {
+          "name": "supplier_consistency",
+          "ok": true,
+          "detail": "selected id=bytehub in quotes=True in ranked=True"
+        },
+        {
+          "name": "required_fields",
+          "ok": true,
+          "detail": "ok"
+        }
+      ],
+      "errors": [],
+      "suggested_exclude_ids": [],
+      "action": "continue",
+      "selected_id": "bytehub"
+    }
+  },
+  {
+    "id": 14,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.553Z",
+    "type": "step_started",
+    "step_id": "s4",
+    "message": "Generate purchase order \u00b7 generate_purchase_order",
+    "payload": {}
+  },
+  {
+    "id": 15,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.565Z",
+    "type": "tool_called",
+    "step_id": "s4",
+    "message": "Invoking generate_purchase_order (attempt 1/3)",
+    "payload": {
+      "inputs": {
+        "entities": {
+          "intent": "procurement",
+          "item": "laptops",
+          "quantity": 50,
+          "budget": 10000000.0,
+          "currency": "PKR",
+          "suppliers_to_compare": 3,
+          "approval_target": "procurement_manager",
+          "constraints": [
+            "total_cost <= PKR 10,000,000"
+          ],
+          "raw_request": "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
+          "extra": {
+            "workflow_id": "wf_sample_primary",
+            "chaos": {}
+          }
+        },
+        "selected": {
+          "id": "bytehub",
+          "name": "ByteHub Supplies",
+          "sku": "BH-PRO-15",
+          "item": "laptops",
+          "unit_price": 175000,
+          "currency": "PKR",
+          "delivery_days": 10,
+          "warranty_months": 36,
+          "rating": 4.8,
+          "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+          "quantity": 50,
+          "total": 8750000
+        },
+        "ranking": {
+          "weights": {
+            "price": 0.5,
+            "delivery": 0.3,
+            "warranty": 0.2
+          },
+          "rejected": [
+            {
+              "id": "megaoffice",
+              "name": "MegaOffice Global",
+              "reason": "Total PKR 11,500,000 exceeds budget PKR 10,000,000",
+              "total": 11500000
+            }
+          ],
+          "ranked": [
+            {
+              "id": "bytehub",
+              "name": "ByteHub Supplies",
+              "sku": "BH-PRO-15",
+              "item": "laptops",
+              "unit_price": 175000,
+              "currency": "PKR",
+              "delivery_days": 10,
+              "warranty_months": 36,
+              "rating": 4.8,
+              "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+              "quantity": 50,
+              "total": 8750000
+            },
+            {
+              "id": "techmart",
+              "name": "TechMart Pakistan",
+              "sku": "TM-LAP-14-i5",
+              "item": "laptops",
+              "unit_price": 180000,
+              "currency": "PKR",
+              "delivery_days": 14,
+              "warranty_months": 24,
+              "rating": 4.6,
+              "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+              "quantity": 50,
+              "total": 9000000
+            },
+            {
+              "id": "pakcompute",
+              "name": "PakCompute Distributors",
+              "sku": "PC-WORK-14",
+              "item": "laptops",
+              "unit_price": 188000,
+              "currency": "PKR",
+              "delivery_days": 21,
+              "warranty_months": 12,
+              "rating": 4.1,
+              "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+              "quantity": 50,
+              "total": 9400000
+            }
+          ],
+          "selected": {
+            "id": "bytehub",
+            "name": "ByteHub Supplies",
+            "sku": "BH-PRO-15",
+            "item": "laptops",
+            "unit_price": 175000,
+            "currency": "PKR",
+            "delivery_days": 10,
+            "warranty_months": 36,
+            "rating": 4.8,
+            "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+            "quantity": 50,
+            "total": 8750000
+          },
+          "justification": "ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000).",
+          "currency": "PKR",
+          "budget": 10000000.0,
+          "quantity": 50
+        },
+        "workflow_id": "wf_sample_primary"
+      }
+    }
+  },
+  {
+    "id": 16,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.615Z",
+    "type": "tool_result",
+    "step_id": "s4",
+    "message": "generate_purchase_order ok in 36 ms",
+    "payload": {
+      "ok": true,
+      "source": "local",
+      "error": null
+    }
+  },
+  {
+    "id": 17,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.628Z",
+    "type": "step_done",
+    "step_id": "s4",
+    "message": "Generate purchase order complete",
+    "payload": {
+      "po_number": "PO-2026-0031",
+      "path": "C:\\Users\\hp\\Projects\\hackhorizon-agentic\\generated\\PO-2026-0031.pdf",
+      "url": "/artifacts/PO-2026-0031.pdf",
+      "line_items": [
+        {
+          "description": "laptops",
+          "qty": 50,
+          "unit_price": 175000.0,
+          "total": 8750000.0
+        }
+      ],
+      "grand_total": 8750000.0,
+      "currency": "PKR",
+      "supplier_id": "bytehub",
+      "supplier_name": "ByteHub Supplies",
+      "workflow_id": "wf_sample_primary"
+    }
+  },
+  {
+    "id": 18,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.760Z",
+    "type": "step_started",
+    "step_id": "s5",
+    "message": "Route for human approval \u00b7 submit_for_approval",
+    "payload": {}
+  },
+  {
+    "id": 19,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.774Z",
+    "type": "tool_called",
+    "step_id": "s5",
+    "message": "Invoking submit_for_approval (attempt 1/3)",
+    "payload": {
+      "inputs": {
+        "workflow_id": "wf_sample_primary",
+        "approver": "procurement_manager",
+        "artifact_url": "/artifacts/PO-2026-0031.pdf",
+        "po_number": "PO-2026-0031",
+        "summary": "ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000)."
+      }
+    }
+  },
+  {
+    "id": 20,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.790Z",
+    "type": "tool_result",
+    "step_id": "s5",
+    "message": "submit_for_approval ok in 5 ms",
+    "payload": {
+      "ok": true,
+      "source": "local",
+      "error": null
+    }
+  },
+  {
+    "id": 21,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.801Z",
+    "type": "step_done",
+    "step_id": "s5",
+    "message": "Route for human approval complete",
+    "payload": {
+      "id": "appr_3e7a8a36d0",
+      "workflow_id": "wf_sample_primary",
+      "status": "pending_approval",
+      "approver": "procurement_manager",
+      "artifact_url": "/artifacts/PO-2026-0031.pdf",
+      "summary": "PO-2026-0031: ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000).",
+      "created_at": "2026-08-27T19:22:06.779Z",
+      "po_number": "PO-2026-0031"
+    }
+  },
+  {
+    "id": 22,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.934Z",
+    "type": "step_started",
+    "step_id": "s6",
+    "message": "Compile stakeholder report \u00b7 compile_report",
+    "payload": {}
+  },
+  {
+    "id": 23,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.948Z",
+    "type": "tool_called",
+    "step_id": "s6",
+    "message": "Invoking compile_report (attempt 1/3)",
+    "payload": {
+      "inputs": {
+        "request": "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
+        "entities": {
+          "intent": "procurement",
+          "item": "laptops",
+          "quantity": 50,
+          "budget": 10000000.0,
+          "currency": "PKR",
+          "suppliers_to_compare": 3,
+          "approval_target": "procurement_manager",
+          "constraints": [
+            "total_cost <= PKR 10,000,000"
+          ],
+          "raw_request": "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
+          "extra": {
+            "workflow_id": "wf_sample_primary",
+            "chaos": {}
+          }
+        },
+        "ranking": {
+          "weights": {
+            "price": 0.5,
+            "delivery": 0.3,
+            "warranty": 0.2
+          },
+          "rejected": [
+            {
+              "id": "megaoffice",
+              "name": "MegaOffice Global",
+              "reason": "Total PKR 11,500,000 exceeds budget PKR 10,000,000",
+              "total": 11500000
+            }
+          ],
+          "ranked": [
+            {
+              "id": "bytehub",
+              "name": "ByteHub Supplies",
+              "sku": "BH-PRO-15",
+              "item": "laptops",
+              "unit_price": 175000,
+              "currency": "PKR",
+              "delivery_days": 10,
+              "warranty_months": 36,
+              "rating": 4.8,
+              "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+              "quantity": 50,
+              "total": 8750000
+            },
+            {
+              "id": "techmart",
+              "name": "TechMart Pakistan",
+              "sku": "TM-LAP-14-i5",
+              "item": "laptops",
+              "unit_price": 180000,
+              "currency": "PKR",
+              "delivery_days": 14,
+              "warranty_months": 24,
+              "rating": 4.6,
+              "notes": "Latitude-equivalent 14\" units, ISO-certified distributor.",
+              "quantity": 50,
+              "total": 9000000
+            },
+            {
+              "id": "pakcompute",
+              "name": "PakCompute Distributors",
+              "sku": "PC-WORK-14",
+              "item": "laptops",
+              "unit_price": 188000,
+              "currency": "PKR",
+              "delivery_days": 21,
+              "warranty_months": 12,
+              "rating": 4.1,
+              "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty.",
+              "quantity": 50,
+              "total": 9400000
+            }
+          ],
+          "selected": {
+            "id": "bytehub",
+            "name": "ByteHub Supplies",
+            "sku": "BH-PRO-15",
+            "item": "laptops",
+            "unit_price": 175000,
+            "currency": "PKR",
+            "delivery_days": 10,
+            "warranty_months": 36,
+            "rating": 4.8,
+            "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing.",
+            "quantity": 50,
+            "total": 8750000
+          },
+          "justification": "ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000).",
+          "currency": "PKR",
+          "budget": 10000000.0,
+          "quantity": 50
+        },
+        "validation": {
+          "passed": true,
+          "checks": [
+            {
+              "name": "budget_compliance",
+              "ok": true,
+              "detail": "8,750,000 <= 10,000,000 PKR"
+            },
+            {
+              "name": "quantity_correctness",
+              "ok": true,
+              "detail": "qty 50 vs requested 50; total 8,750,000 vs unit\u00d7qty 8,750,000"
+            },
+            {
+              "name": "supplier_consistency",
+              "ok": true,
+              "detail": "selected id=bytehub in quotes=True in ranked=True"
+            },
+            {
+              "name": "required_fields",
+              "ok": true,
+              "detail": "ok"
+            }
+          ],
+          "errors": [],
+          "suggested_exclude_ids": [],
+          "action": "continue",
+          "selected_id": "bytehub"
+        },
+        "po": {
+          "po_number": "PO-2026-0031",
+          "path": "C:\\Users\\hp\\Projects\\hackhorizon-agentic\\generated\\PO-2026-0031.pdf",
+          "url": "/artifacts/PO-2026-0031.pdf",
+          "line_items": [
+            {
+              "description": "laptops",
+              "qty": 50,
+              "unit_price": 175000.0,
+              "total": 8750000.0
+            }
+          ],
+          "grand_total": 8750000.0,
+          "currency": "PKR",
+          "supplier_id": "bytehub",
+          "supplier_name": "ByteHub Supplies",
+          "workflow_id": "wf_sample_primary"
+        },
+        "approval": {
+          "id": "appr_3e7a8a36d0",
+          "workflow_id": "wf_sample_primary",
+          "status": "pending_approval",
+          "approver": "procurement_manager",
+          "artifact_url": "/artifacts/PO-2026-0031.pdf",
+          "summary": "PO-2026-0031: ByteHub Supplies ranked highest on the disclosed model (price 50% / delivery 30% / warranty 20%) with a weighted score of 91.0. Unit price PKR 175,000, total PKR 8,750,000 for 50 units, 10 day delivery, 36 month warranty. Rejected: MegaOffice Global (Total PKR 11,500,000 exceeds budget PKR 10,000,000).",
+          "created_at": "2026-08-27T19:22:06.779Z",
+          "po_number": "PO-2026-0031"
+        },
+        "status": "pending_approval",
+        "tools_used": [
+          "fetch_suppliers",
+          "rank_suppliers",
+          "validate_selection",
+          "generate_purchase_order",
+          "submit_for_approval"
+        ]
+      }
+    }
+  },
+  {
+    "id": 24,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.963Z",
+    "type": "tool_result",
+    "step_id": "s6",
+    "message": "compile_report ok in 2 ms",
+    "payload": {
+      "ok": true,
+      "source": "local",
+      "error": null
+    }
+  },
+  {
+    "id": 25,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:06.976Z",
+    "type": "step_done",
+    "step_id": "s6",
+    "message": "Compile stakeholder report complete",
+    "payload": {
+      "report": "# Workflow completion report\n\n**Status:** Pending Approval\n**Request:** Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.\n\n## What was requested\n- Item: **laptops**\n- Quantity: **50**\n- Budget ceiling: **PKR 10,000,000**\n- Suppliers to compare: **3**\n- Approval owner: **procurement\u2026",
+      "status": "pending_approval"
+    }
+  },
+  {
+    "id": 26,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:07.109Z",
+    "type": "report_ready",
+    "step_id": null,
+    "message": "Stakeholder report ready",
+    "payload": {
+      "chars": 1839
+    }
+  },
+  {
+    "id": 27,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:07.121Z",
+    "type": "approval_requested",
+    "step_id": null,
+    "message": "Waiting for human approval \u2014 agent will not auto-approve spend",
+    "payload": {}
+  },
+  {
+    "id": 28,
+    "workflow_id": "wf_sample_primary",
+    "ts": "2026-08-27T19:22:07.128Z",
+    "type": "workflow_completed",
+    "step_id": null,
+    "message": "Execution finished; approval gate is open",
+    "payload": {}
+  }
+]

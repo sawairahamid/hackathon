@@ -1,0 +1,50 @@
+[
+  {
+    "id": "bytehub",
+    "name": "ByteHub Supplies",
+    "sku": "BH-PRO-15",
+    "item": "laptops",
+    "unit_price": 175000,
+    "currency": "PKR",
+    "delivery_days": 10,
+    "warranty_months": 36,
+    "rating": 4.8,
+    "notes": "ThinkPad-class 15\" fleet units, 3-year on-site warranty, bulk education pricing."
+  },
+  {
+    "id": "techmart",
+    "name": "TechMart Pakistan",
+    "sku": "TM-LAP-14-i5",
+    "item": "laptops",
+    "unit_price": 180000,
+    "currency": "PKR",
+    "delivery_days": 14,
+    "warranty_months": 24,
+    "rating": 4.6,
+    "notes": "Latitude-equivalent 14\" units, ISO-certified distributor."
+  },
+  {
+    "id": "megaoffice",
+    "name": "MegaOffice Global",
+    "sku": "MO-ULTRA-16",
+    "item": "laptops",
+    "unit_price": 230000,
+    "currency": "PKR",
+    "delivery_days": 7,
+    "warranty_months": 36,
+    "rating": 4.4,
+    "notes": "Premium 16\" spec. Fast delivery but typically exceeds mid-range fleet budgets."
+  },
+  {
+    "id": "pakcompute",
+    "name": "PakCompute Distributors",
+    "sku": "PC-WORK-14",
+    "item": "laptops",
+    "unit_price": 188000,
+    "currency": "PKR",
+    "delivery_days": 21,
+    "warranty_months": 12,
+    "rating": 4.1,
+    "notes": "Value-line 14\" workstations. Longer lead time, 1-year depot warranty."
+  }
+]
