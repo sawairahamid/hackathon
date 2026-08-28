@@ -52,6 +52,10 @@ def _chaos_fail(chaos: ChaosConfig | dict | None) -> str | None:
         return "malformed"
     if c.force_over_budget:
         return "over_budget"
+    if c.force_price_shock:
+        return "price_shock"
+    if c.force_multi_failure:
+        return "multi_failure"
     return None
 
 
@@ -123,6 +127,21 @@ def fetch_suppliers(
     if budget is not None:
         for q in quotes:
             q["meets_budget"] = q["total"] <= budget
+    
+    # If use_fallback is explicitly set by incident commander, we don't return error
+    use_fallback = isinstance(chaos, dict) and chaos.get("use_fallback")
+    
+    if last_err and not use_fallback:
+        # Don't silently fallback! The incident commander MUST handle it.
+        # We return the error, so incident commander can trigger Fallback action or Escalate.
+        return ToolResult(
+            ok=False,
+            tool="fetch_suppliers",
+            error=f"All retries failed. Last error: {last_err}",
+            error_type="TOOL_UNAVAILABLE",
+            source="live"
+        )
+            
     return ToolResult(
         ok=True,
         tool="fetch_suppliers",

@@ -21,6 +21,7 @@ from app.models import ApprovalDecision, CreateWorkflowRequest
 from app.parser import parse_request
 from app.planner import plan_workflow
 from app.tools import load_all, registered
+from app import domain_ext  # noqa: F401 — registers UC3/UC4 tools + patches parser/planner
 
 load_dotenv()
 
@@ -127,7 +128,20 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
         payload=json.loads(plan.model_dump_json()),
     )
 
-    task = asyncio.create_task(asyncio.to_thread(run_workflow, wid, entities, plan))
+    def _runner():
+        from app.models import Plan
+        current_plan = plan
+        while True:
+            res = run_workflow(wid, entities, current_plan)
+            if res == "REPLAN":
+                # Fetch the newly replanned version
+                row = trace.get_workflow(wid)
+                if row and row.get("plan_json"):
+                    current_plan = Plan(**json.loads(row["plan_json"]))
+                    continue
+            break
+
+    task = asyncio.create_task(asyncio.to_thread(_runner))
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
 
@@ -143,6 +157,21 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
 @app.get("/api/workflows/{wid}")
 def get_workflow(wid: str) -> dict:
     return _snapshot(wid)
+
+@app.get("/api/workflows/{wid}/incidents")
+def get_incidents(wid: str) -> dict:
+    incidents = trace.list_incidents(wid)
+    actions = trace.list_recovery_actions(wid)
+    return {"incidents": incidents, "actions": actions}
+
+from app.impact import calculate_impact
+
+@app.get("/api/workflows/{wid}/impact")
+def get_impact(wid: str) -> dict:
+    wf = trace.get_workflow(wid)
+    if not wf:
+        raise HTTPException(404, "workflow not found")
+    return calculate_impact(wid)
 
 
 @app.get("/api/workflows/{wid}/events")
@@ -205,6 +234,30 @@ def decide(wid: str, body: ApprovalDecision) -> dict:
         report = report.rstrip() + stamp
         trace.set_workflow_fields(wid, report=report)
         trace.emit(wid, "report_ready", "Report updated with the human decision")
+        
+    try:
+        if row and row.get("entities_json"):
+            entities = json.loads(row["entities_json"])
+            steps = trace.list_steps(wid)
+            rank_step = next((s for s in steps if s.get("tool") == "rank_suppliers"), None)
+            po_step = next((s for s in steps if s.get("tool") == "generate_purchase_order"), None)
+            if rank_step and rank_step.get("output") and po_step and po_step.get("output"):
+                from app.tools.documents import render_po
+                po_data = po_step["output"]
+                rank_data = rank_step["output"]
+                if "po_number" in po_data and "selected" in rank_data:
+                    render_po(
+                        po_number=po_data["po_number"],
+                        entities=entities,
+                        selected=rank_data["selected"],
+                        ranking=rank_data,
+                        approval_status=status,
+                        approval_note=body.note,
+                    )
+    except Exception as e:
+        import logging
+        logging.error("Failed to re-render PO on approval: %s", e)
+
     return {"approval": rec, "status": status}
 
 

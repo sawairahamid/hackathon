@@ -6,11 +6,13 @@ from pydantic import BaseModel, Field
 
 
 Intent = Literal["procurement", "vendor_comparison", "other"]
-FailAction = Literal["retry", "escalate", "skip"]
+FailAction = Literal["retry", "escalate", "skip", "replan"]
 WorkflowStatus = Literal[
     "pending",
     "planning",
     "running",
+    "recovering",
+    "replanning",
     "pending_approval",
     "approved",
     "rejected",
@@ -18,14 +20,42 @@ WorkflowStatus = Literal[
     "failed",
     "completed",
 ]
-StepStatus = Literal["pending", "in_progress", "done", "failed", "skipped"]
+StepStatus = Literal["pending", "in_progress", "done", "failed", "skipped", "recovering", "replanned"]
 ApprovalStatus = Literal["pending_approval", "approved", "rejected"]
+
+IncidentType = Literal[
+    "TOOL_TIMEOUT",
+    "TOOL_UNAVAILABLE",
+    "INVALID_TOOL_RESPONSE",
+    "DATA_CHANGED",
+    "BUDGET_VIOLATION",
+    "VALIDATION_FAILURE",
+    "MISSING_REQUIRED_FIELD",
+    "SUPPLIER_BECOMES_UNAVAILABLE",
+    "UNKNOWN_INCIDENT"
+]
+
+Severity = Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+
+RecoveryActionType = Literal["RETRY", "FALLBACK", "REPLAN", "ESCALATE", "CONTINUE"]
+
+class IncidentRecord(BaseModel):
+    incident_id: str
+    type: IncidentType
+    severity: Severity
+    message: str
+    affected_steps: list[str] = Field(default_factory=list)
+    recovery_action: RecoveryActionType
+    reason: str
+    requires_human: bool = False
 
 
 class ChaosConfig(BaseModel):
     force_timeout: bool = False
     force_malformed: bool = False
     force_over_budget: bool = False
+    force_price_shock: bool = False
+    force_multi_failure: bool = False
     extra_latency_ms: int = 0
 
 
@@ -73,6 +103,7 @@ class ToolResult(BaseModel):
     latency_ms: int = 0
     data: Any = None
     error: str | None = None
+    error_type: IncidentType | None = None
     source: str = "local"
 
 

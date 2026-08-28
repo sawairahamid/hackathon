@@ -22,54 +22,72 @@
       --blue: #7ab6ff;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", sans-serif; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; }
     body {
       background-image:
         linear-gradient(rgba(93,255,178,0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(93,255,178,0.03) 1px, transparent 1px);
       background-size: 28px 28px;
     }
-    button, textarea, input { font-family: inherit; }
+    button, textarea, input { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; }
     .top {
-      display: flex; align-items: center; gap: 18px;
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
       padding: 10px 18px; border-bottom: 1px solid var(--line);
       background: rgba(7,9,12,0.92); position: sticky; top: 0; z-index: 5;
     }
     .mark {
-      font-family: "IBM Plex Mono", monospace; font-weight: 600; letter-spacing: 0.08em;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-weight: 600; letter-spacing: 0.08em;
       color: var(--phos); font-size: 13px;
     }
     .mark span { color: var(--muted); font-weight: 400; }
-    .pills { display: flex; gap: 8px; margin-left: auto; }
+    .pills { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
     .pill {
-      font-family: "IBM Plex Mono", monospace; font-size: 11px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px;
       border: 1px solid var(--line); padding: 4px 8px; border-radius: 99px; color: var(--muted);
     }
     .pill.on { border-color: var(--phos); color: var(--phos); background: var(--phos-dim); }
     .pill.off { border-color: var(--alert); color: var(--alert); }
-    .clock { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); }
+    .clock { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; color: var(--muted); }
     .shell {
       display: grid; grid-template-columns: 320px 1fr 340px;
       gap: 12px; padding: 12px; height: calc(100vh - 52px);
     }
-    @media (max-width: 1100px) {
+    /* Responsive: collapse to single column at ≤1120px */
+    @media (max-width: 1120px) {
       .shell { grid-template-columns: 1fr; height: auto; }
+      .col { min-height: unset; }
+      /* Prevent card h2 tab labels from overlapping card content on narrow screens */
+      .card h2 { white-space: normal; word-break: break-word; }
+      .card { min-width: 0; }
+    }
+    /* Extra fix for very small phones (375px) */
+    @media (max-width: 480px) {
+      .top { padding: 8px 12px; gap: 10px; }
+      .shell { padding: 8px; gap: 8px; }
+      .card h2 { font-size: 10px; letter-spacing: 0.1em; }
+      .pills { margin-left: 0; width: 100%; }
+      .mark { font-size: 12px; }
+      .ghost, .go, .tiny { font-size: 11px; }
+      .plan-step { font-size: 12px; }
+      textarea { font-size: 11px; }
     }
     .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
     .card {
       background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-      display: flex; flex-direction: column; min-height: 0;
+      display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
     }
     .card h2 {
       margin: 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
       color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line);
-      font-family: "IBM Plex Mono", monospace;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+      /* Prevent tab label text from overflowing/clipping into card content */
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .body { padding: 12px 14px; overflow: auto; }
     textarea {
       width: 100%; min-height: 120px; resize: vertical; background: var(--panel-2);
       border: 1px solid var(--line); color: var(--text); padding: 10px; border-radius: 8px;
-      font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.45;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.45;
     }
     .presets { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
     .ghost, .go, .tiny {
@@ -84,7 +102,7 @@
     .go:disabled { opacity: 0.5; cursor: wait; }
     .chaos label {
       display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
-      margin: 4px 0; font-family: "IBM Plex Mono", monospace;
+      margin: 4px 0; font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
     }
     .plan-step {
       display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 8px 0;
@@ -96,8 +114,8 @@
     .dot.done { background: var(--phos); }
     .dot.failed, .dot.skipped { background: var(--alert); }
     .step-name { font-weight: 600; }
-    .step-tool { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--muted); }
-    .trace { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; line-height: 1.5; }
+    .step-tool { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px; color: var(--muted); }
+    .trace { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11.5px; line-height: 1.5; }
     .ev { padding: 4px 0; border-bottom: 1px solid #1a222c; }
     .ev .ts { color: var(--muted); margin-right: 8px; }
     .ev .ty { color: var(--amber); margin-right: 8px; }
@@ -111,8 +129,46 @@
     .no { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; cursor: pointer; }
     a { color: var(--phos); }
     .banner {
-      font-family: "IBM Plex Mono", monospace; font-size: 12px; padding: 8px 10px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; padding: 8px 10px;
       border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; color: var(--amber);
+    }
+
+    /* ── Stamp animation (approve / reject overlay) ── */
+    @keyframes stamp-in {
+      0%   { transform: scale(3) rotate(-15deg); opacity: 0; }
+      60%  { transform: scale(0.9) rotate(-6deg); opacity: 1; }
+      80%  { transform: scale(1.05) rotate(-6deg); opacity: 1; }
+      100% { transform: scale(1) rotate(-6deg); opacity: 1; }
+    }
+    .stamp-wrap {
+      position: relative;
+      display: inline-block;
+      margin-top: 12px;
+    }
+    .stamp {
+      display: inline-block;
+      padding: 6px 14px;
+      border: 3px solid currentColor;
+      border-radius: 4px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.92;
+      transform: rotate(-6deg);
+      animation: stamp-in 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    .stamp.approved { color: var(--phos); border-color: var(--phos); }
+    .stamp.rejected { color: var(--alert); border-color: var(--alert); }
+
+    /* ── prefers-reduced-motion: skip stamp-in animation, show final state instantly ── */
+    @media (prefers-reduced-motion: reduce) {
+      .stamp {
+        animation: none;
+        opacity: 0.92;
+        transform: rotate(-6deg);
+      }
     }
   </style>
 </head>
@@ -133,21 +189,29 @@
           <div class="presets">
             <button class="ghost" data-preset="laptops">Primary · 50 laptops / PKR 10M</button>
             <button class="ghost" data-preset="software">Secondary · vendor renewal / $20k</button>
+            <button class="ghost" data-preset="reimburse">Expense · Travel reimbursement</button>
+            <button class="ghost" data-preset="onboarding">Onboarding · New hire setup</button>
           </div>
           <textarea id="prompt">Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.</textarea>
           <div class="chaos">
-            <h2 style="border:0;padding:10px 0 4px;letter-spacing:0.14em;">Chaos / failure injection</h2>
+            <h2 style="border:0;padding:10px 0 4px;letter-spacing:0.14em;white-space:normal;">Chaos / failure injection</h2>
             <label><input type="checkbox" id="c-timeout" /> Force vendor timeout (retry)</label>
             <label><input type="checkbox" id="c-malformed" /> Force malformed payload</label>
             <label><input type="checkbox" id="c-budget" /> Inflate all quotes over budget</label>
+            <label><input type="checkbox" id="c-price-shock" /> Price shock (some suppliers)</label>
+            <label><input type="checkbox" id="c-multi-fail" /> Multi-failure cascade</label>
           </div>
           <button class="go" id="run">Execute workflow</button>
         </div>
       </div>
+      <div class="card grow">
+        <h2>Impact & Analytics</h2>
+        <div class="body" id="impact"><span style="color:var(--muted)">Run a workflow to see impact</span></div>
+      </div>
     </section>
     <section class="col">
-      <div class="card" style="flex: 0 0 42%;">
-        <h2>Plan (shown before execution)</h2>
+      <div class="card" style="flex: 0 0 35%;">
+        <h2>Plan (Dynamic DAG)</h2>
         <div class="body" id="plan"><div class="banner">Submit a request. The DAG appears here before any tool runs — that is how judges can tell this is not a scripted demo.</div></div>
       </div>
       <div class="card grow">
@@ -157,11 +221,15 @@
     </section>
     <section class="col">
       <div class="card">
-        <h2>Selection & artifact</h2>
+        <h2>Incident Center & Commander</h2>
+        <div class="body trace" id="incidents"><span style="color:var(--muted)">No incidents</span></div>
+      </div>
+      <div class="card" style="flex: 0 0 35%;">
+        <h2>Decision X-Ray</h2>
         <div class="body" id="artifact"><span style="color:var(--muted)">Waiting for ranking…</span></div>
       </div>
       <div class="card grow">
-        <h2>Approval inbox + report</h2>
+        <h2>Approval Inbox</h2>
         <div class="body" id="report"></div>
       </div>
     </section>
@@ -170,7 +238,9 @@
     const $ = (id) => document.getElementById(id);
     const prompts = {
       laptops: "Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.",
-      software: "Our software vendor contract is expiring. Compare 3 renewal/alternative options and recommend one within a $20,000 budget."
+      software: "Our software vendor contract is expiring. Compare 3 renewal/alternative options and recommend one within a $20,000 budget.",
+      reimburse: "Process this employee's travel reimbursement request for Sarah Ahmed: meals $320 (4 days), lodging $750 (3 nights), transport $480. Validate against policy and route for manager approval.",
+      onboarding: "Set up onboarding tasks for a new hire starting next Monday: accounts, equipment request (laptop, monitor, headset, keyboard), welcome email."
     };
     document.querySelectorAll("[data-preset]").forEach(btn => {
       btn.onclick = () => { $("prompt").value = prompts[btn.dataset.preset]; };
@@ -230,21 +300,126 @@
       const statuses = {};
       (snap.steps || []).forEach(s => statuses[s.step_id] = s.status);
       renderPlan(plan, statuses);
+      
+      // Update Incidents
+      try {
+          const inc_res = await fetch("/api/workflows/" + id + "/incidents");
+          if (inc_res.ok) {
+              const {incidents, actions} = await inc_res.json();
+              if (!incidents || incidents.length === 0) {
+                  $("incidents").innerHTML = `<div style="color:var(--phos); font-weight: 600;">✓ SYSTEM HEALTHY</div><div style="color:var(--muted); margin-top: 4px;">No active incidents</div>`;
+              } else {
+                  const active = incidents.filter(i => !actions.find(a => a.incident_id === i.id) || actions.find(a => a.incident_id === i.id && a.action_type !== 'RESOLVED' && a.action_type !== 'ESCALATE'));
+                  const resolved = incidents.filter(i => actions.find(a => a.incident_id === i.id));
+                  
+                  let incHtml = `<div style="display:flex; justify-content:space-between; margin-bottom: 12px; font-weight: 600; font-size: 11px;">
+                      <span style="color:var(--alert)">ACTIVE INCIDENTS: ${active.length}</span>
+                      <span style="color:var(--phos)">RESOLVED: ${resolved.length}</span>
+                  </div>`;
+                  
+                  for (const inc of incidents) {
+                      const act = actions.find(a => a.incident_id === inc.id);
+                      const isResolved = !!act;
+                      const color = isResolved ? 'var(--phos)' : 'var(--alert)';
+                      const icon = isResolved ? '✓' : '⚠';
+                      
+                      incHtml += `<div class="ev" style="border-left: 2px solid ${color}; padding-left: 10px; margin-bottom: 12px;">
+                          <div style="color:${color}; font-weight: 600; font-size: 12px; margin-bottom: 4px;">${icon} ${inc.type.replaceAll('_', ' ')}</div>
+                          <div class="kv">
+                              <b>Severity:</b><div>${inc.severity}</div>
+                              <b>Status:</b><div>${isResolved ? 'RESOLVED' : 'RECOVERING'}</div>
+                              <b>Step:</b><div>${inc.step_id || 'N/A'}</div>
+                              <b>Message:</b><div>${inc.message}</div>
+                          </div>`;
+                          
+                      if (act) {
+                          incHtml += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);" class="kv">
+                              <b>Agent Action:</b><div style="color:var(--phos)">${act.action_type}</div>
+                              <b>Reason:</b><div>${act.reason}</div>
+                          </div>`;
+                      }
+                      incHtml += `</div>`;
+                  }
+                  $("incidents").innerHTML = incHtml;
+              }
+          }
+          
+          const imp_res = await fetch("/api/workflows/" + id + "/impact");
+          if (imp_res.ok) {
+              const imp = await imp_res.json();
+              
+              if (!imp || !imp.workflow_id) {
+                  $("impact").innerHTML = `<span style="color:var(--muted)">Run a workflow to see impact</span>`;
+              } else {
+                  const wf_type = snap.plan?.title || "Workflow";
+                  const pct = imp.savings_percent ? imp.savings_percent + "%" : "0%";
+                  const budget_str = money(imp.budget, snap.entities?.currency || "PKR");
+                  const cost_str = imp.final_cost ? money(imp.final_cost, snap.entities?.currency || "PKR") : "N/A";
+                  const savings_str = imp.savings ? money(imp.savings, snap.entities?.currency || "PKR") : "0";
+                  
+                  $("impact").innerHTML = `
+                      <div style="font-weight: 600; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+                          <div style="font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;">WORKFLOW</div>
+                          <div>${wf_type}</div>
+                          <div style="font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px;">STATUS</div>
+                          <div style="color: var(--amber);">${imp.status?.replaceAll('_', ' ') || 'Running...'}</div>
+                      </div>
+                      
+                      <div style="font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">FINANCIAL IMPACT</div>
+                      <div class="kv" style="margin-bottom: 16px;">
+                          <b>Budget:</b><div>${budget_str}</div>
+                          <b>Final Cost:</b><div>${cost_str}</div>
+                          <b>Savings:</b><div style="color: var(--phos); font-weight: 600;">${savings_str} (${pct})</div>
+                      </div>
+                      
+                      <div style="font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">OPERATIONS</div>
+                      <div class="kv" style="margin-bottom: 16px;">
+                          <b>Evaluated:</b><div>${imp.suppliers_evaluated}</div>
+                          <b>Rejected:</b><div>${imp.suppliers_rejected}</div>
+                          <b>Auto Steps:</b><div>${imp.automated_steps}</div>
+                          <b>Tool Calls:</b><div>${imp.tool_calls}</div>
+                          <b>Replans:</b><div>${imp.workflow_replans}</div>
+                          <b>Recoveries:</b><div>${imp.recovery_events}</div>
+                          <b>Val Fails:</b><div>${imp.validation_failures}</div>
+                          <b>Human Int:</b><div>${imp.human_interventions}</div>
+                      </div>
+                      
+                      <div class="kv">
+                          <b>Duration:</b><div>${(imp.duration_ms / 1000).toFixed(2)}s</div>
+                      </div>
+                  `;
+              }
+          }
+      } catch (e) {
+          console.error("Error updating impact/incidents", e);
+      }
       const ranking = (snap.steps || []).find(s => s.tool === "rank_suppliers");
       const po = (snap.steps || []).find(s => s.tool === "generate_purchase_order");
       const sel = ranking?.output?.selected;
       const rejected = ranking?.output?.rejected || [];
       let art = "";
       if (sel) {
-        art += `<div class="kv">
-          <b>Supplier</b><div>${sel.name}</div>
-          <b>Total</b><div>${money(sel.total, ranking.output.currency)}</div>
-          <b>Score</b><div>${sel.scores?.weighted} · 50/30/20 model</div>
-          <b>Delivery</b><div>${sel.delivery_days} days · ${sel.warranty_months} mo warranty</div>
-        </div><p style="font-size:12px;color:var(--muted);margin-top:8px;">${ranking.output.justification || ""}</p>`;
+        art += `<div class="kv" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
+          <b>Selected:</b><div style="color:var(--phos)">${sel.name}</div>
+          <b>Total:</b><div>${money(sel.total, ranking.output.currency)}</div>
+          <b>Scores:</b><div>Price: ${sel.scores?.price} | Delivery: ${sel.scores?.delivery} | Warranty: ${sel.scores?.warranty}</div>
+          <b>Weighted:</b><div>${sel.scores?.weighted}</div>
+        </div>`;
       }
+      
+      if (ranking?.output?.ranked?.length) {
+          art += `<div style="margin-bottom:8px; font-weight:bold; font-size:11px; text-transform:uppercase; color:var(--muted);">All Evaluated Suppliers</div>`;
+          ranking.output.ranked.forEach(r => {
+              if (sel && r.id === sel.id) return;
+              art += `<div class="kv" style="margin-bottom: 6px;">
+                  <b>${r.name}:</b><div>${r.scores?.weighted} (P:${r.scores?.price} D:${r.scores?.delivery} W:${r.scores?.warranty})</div>
+              </div>`;
+          });
+      }
+      
       if (rejected.length) {
-        art += `<p style="font-size:12px;margin-top:8px;">Rejected:<br>` + rejected.map(r => `• ${r.name}: ${r.reason}`).join("<br>") + "</p>";
+        art += `<div style="margin-bottom:8px; font-weight:bold; font-size:11px; text-transform:uppercase; color:var(--alert); margin-top:12px;">Rejected Suppliers</div>`;
+        art += `<p style="font-size:12px;margin-top:0;">` + rejected.map(r => `• <b>${r.name}</b>: ${r.reason} <span style="color:var(--muted)">[${r.scores?.weighted || 'N/A'}]</span>`).join("<br>") + "</p>";
       }
       if (po?.output?.url) {
         art += `<p><a href="${po.output.url}" target="_blank">Open ${po.output.po_number}.pdf</a></p>`;
@@ -262,10 +437,35 @@
         }
       }
       if (snap.report) html += `<div class="report">${snap.report.replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</div>`;
-      $("report").innerHTML = html;
+      const reportEl = $("report");
+      reportEl.innerHTML = html;
+
+      // Render stamp overlay for approved / rejected decisions
+      if (snap.status === "approved" || snap.status === "rejected") {
+        renderStamp(reportEl, snap.status);
+      }
       const yes = $("btn-yes"), no = $("btn-no");
       if (yes) yes.onclick = () => decide(id, "approve");
       if (no) no.onclick = () => decide(id, "reject");
+    }
+
+    /**
+     * Renders the stamp overlay for approved / rejected states.
+     * CSS @keyframes stamp-in drives the animation.
+     * @media (prefers-reduced-motion: reduce) disables it, showing the final state instantly.
+     */
+    function renderStamp(container, decision) {
+      // Remove any previous stamp so re-renders are clean
+      const old = container.querySelector(".stamp-wrap");
+      if (old) old.remove();
+      if (decision !== "approved" && decision !== "rejected") return;
+      const wrap = document.createElement("div");
+      wrap.className = "stamp-wrap";
+      const stamp = document.createElement("span");
+      stamp.className = `stamp ${decision}`;
+      stamp.textContent = decision === "approved" ? "APPROVED" : "REJECTED";
+      wrap.appendChild(stamp);
+      container.prepend(wrap);
     }
 
     async function decide(id, decision) {
@@ -285,6 +485,8 @@
         force_timeout: $("c-timeout").checked,
         force_malformed: $("c-malformed").checked,
         force_over_budget: $("c-budget").checked,
+        force_price_shock: $("c-price-shock").checked,
+        force_multi_failure: $("c-multi-fail").checked,
         extra_latency_ms: 0
       };
       const res = await fetch("/api/workflows", {
@@ -299,7 +501,7 @@
         const ev = JSON.parse(e.data);
         appendTrace(ev);
         if (ev.type === "plan_created") renderPlan(ev.payload, {});
-        if (["step_done","tool_result","report_ready","approval_requested","workflow_completed","escalated","validation"].includes(ev.type)) {
+        if (["step_done","tool_result","report_ready","approval_requested","workflow_completed","escalated","validation","impact_ready","incident_detected","RECOVERY_ACTION_SELECTED","REPLAN_COMPLETED"].includes(ev.type)) {
           refreshSnapshot(data.id);
         }
         if (ev.type === "workflow_completed" || ev.type === "workflow_failed") {

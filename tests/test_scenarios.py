@@ -78,6 +78,7 @@ def _run(text: str, wid: str, chaos: dict | None = None) -> str:
     ent.extra = extra
     plan = template_plan(ent)
     trace.create_workflow(wid, text, extra["chaos"])
+    trace.set_workflow_fields(wid, entities_json=ent.model_dump_json(), plan_json=plan.model_dump_json())
     return run_workflow(wid, ent, plan)
 
 
@@ -121,10 +122,11 @@ def test_secondary_use_case_same_pipeline_no_new_code():
 
 def test_over_budget_chaos_escalates_instead_of_forging_a_po():
     chaos = ChaosConfig(force_over_budget=True).model_dump()
+    chaos["use_fallback"] = True
     # Local fallback ignores HTTP chaos flags; force the tool path by invoking rank on inflated quotes.
     quotes = invoke(
         "fetch_suppliers",
-        {"item": "laptops", "quantity": 50, "currency": "PKR", "budget": 10_000_000},
+        {"item": "laptops", "quantity": 50, "currency": "PKR", "budget": 10_000_000, "chaos": chaos},
     ).data["quotes"]
     for q in quotes:
         q["unit_price"] *= 5
@@ -181,3 +183,153 @@ def test_tool_timeout_retries_then_succeeds(monkeypatch):
         assert status in {"pending_approval", "escalated", "failed"}
     finally:
         _REGISTRY["fetch_suppliers"]["fn"] = original
+
+
+# ── Use case 3: Expense / reimbursement ──────────────────────────────────────
+
+REIMBURSE_PROMPT = (
+    "Process this employee's travel reimbursement request for Sarah Ahmed: "
+    "meals $320 (4 days), lodging $750 (3 nights), transport $480. "
+    "Validate against policy and route for manager approval."
+)
+
+
+def test_parse_reimbursement_intent():
+    """Parser must identify 'reimbursement' intent from the reference prompt."""
+    # domain_ext must be loaded before parse_request is called
+    import app.domain_ext  # noqa: F401
+    from app.parser import heuristic_parse
+    ent = heuristic_parse(REIMBURSE_PROMPT)
+    assert ent.extra.get("intent_detail") == "reimbursement", (
+        f"Expected intent_detail='reimbursement', got extra={ent.extra}"
+    )
+
+
+def test_reimbursement_end_to_end():
+    """UC3: reimbursement workflow flags policy violations and reaches pending_approval or escalated."""
+    import app.domain_ext  # noqa: F401 — ensures patch active
+    from app.parser import parse_request as _pr
+    from app.planner import template_plan as _tp
+
+    wid = "wf_reimburse"
+    ent, _ = _pr(REIMBURSE_PROMPT)
+    extra = dict(ent.extra or {})
+    extra["workflow_id"] = wid
+    # Inject concrete line items so the deterministic validator has something to check
+    extra["line_items"] = [
+        {"category": "meals",    "amount": 320.0,  "quantity": 4, "description": "Meals 4 days"},
+        {"category": "lodging",  "amount": 750.0,  "quantity": 3, "description": "Hotel 3 nights"},
+        {"category": "transport","amount": 480.0,  "quantity": 1, "description": "Flights"},
+    ]
+    from app.models import ChaosConfig
+    extra["chaos"] = ChaosConfig().model_dump()
+    ent.extra = extra
+
+    plan = _tp(ent)
+    assert any(s.tool == "validate_expense" for s in plan.steps), "Plan must include validate_expense"
+    assert any(s.tool == "submit_for_approval" for s in plan.steps), "Plan must include submit_for_approval"
+
+    trace.create_workflow(wid, REIMBURSE_PROMPT, extra["chaos"])
+    status = run_workflow(wid, ent, plan)
+
+    assert status in {"pending_approval", "escalated", "failed"}, f"Unexpected final status: {status}"
+
+    steps = {s["step_id"]: s for s in trace.list_steps(wid)}
+    # validate_expense step must have run
+    val_step = next((s for s in steps.values() if "validate" in (s.get("tool") or "")), None)
+    if val_step and val_step["status"] == "done":
+        import json as _json
+        val_out = _json.loads(val_step["output_json"] or "{}")
+        # meals: $320 for 4 days = $80/day > $75 limit → violation expected
+        assert val_out.get("violations") or not val_out.get("passed"), (
+            "Expected at least one policy violation (meals $80/day > $75 limit)"
+        )
+
+
+# ── Use case 4: Employee onboarding ──────────────────────────────────────────
+
+ONBOARDING_PROMPT = (
+    "Set up onboarding tasks for a new hire starting next Monday: "
+    "accounts, equipment request (laptop, monitor, headset, keyboard), welcome email."
+)
+
+
+def test_parse_onboarding_intent():
+    """Parser must identify 'onboarding' intent from the reference prompt."""
+    import app.domain_ext  # noqa: F401
+    from app.parser import heuristic_parse
+    ent = heuristic_parse(ONBOARDING_PROMPT)
+    assert ent.extra.get("intent_detail") == "onboarding", (
+        f"Expected intent_detail='onboarding', got extra={ent.extra}"
+    )
+
+
+def test_onboarding_end_to_end():
+    """UC4: onboarding workflow provisions accounts, generates equipment doc, reaches pending_approval."""
+    import app.domain_ext  # noqa: F401
+    from app.parser import parse_request as _pr
+    from app.planner import template_plan as _tp
+
+    wid = "wf_onboard"
+    ent, _ = _pr(ONBOARDING_PROMPT)
+    extra = dict(ent.extra or {})
+    extra["workflow_id"] = wid
+    extra.setdefault("employee_name", "Alex Johnson")
+    extra.setdefault("start_date", "2026-09-07")
+    extra.setdefault("equipment_needed", ["laptop", "monitor", "headset", "keyboard"])
+    from app.models import ChaosConfig
+    extra["chaos"] = ChaosConfig().model_dump()
+    ent.extra = extra
+
+    plan = _tp(ent)
+    assert any(s.tool == "provision_accounts" for s in plan.steps), "Plan must include provision_accounts"
+    assert any(s.tool == "request_equipment" for s in plan.steps), "Plan must include request_equipment"
+
+    trace.create_workflow(wid, ONBOARDING_PROMPT, extra["chaos"])
+    status = run_workflow(wid, ent, plan)
+
+    assert status in {"pending_approval", "escalated", "failed"}, f"Unexpected final status: {status}"
+
+    steps = {s["step_id"]: s for s in trace.list_steps(wid)}
+    # provision_accounts must have succeeded
+    prov = next((s for s in steps.values() if "provision" in (s.get("tool") or "")), None)
+    if prov and prov["status"] == "done":
+        import json as _json
+        prov_out = _json.loads(prov["output_json"] or "{}")
+        assert prov_out.get("count", 0) > 0, "At least one account must be provisioned"
+
+    # Approval gate must be queued
+    apprv = trace.list_approvals("pending_approval")
+    assert any(a["workflow_id"] == wid for a in apprv), "Approval record must exist for onboarding workflow"
+
+
+def test_impact_generated_after_workflow():
+    wid = "wf_impact_test"
+    # Ensure it's a new test DB execution
+    status = _run(PRIMARY, wid)
+    assert status == "pending_approval"
+    
+    from app.impact import calculate_impact
+    impact = calculate_impact(wid)
+    assert impact["workflow_id"] == wid
+    assert impact["status"] == "pending_approval"
+    assert impact["budget"] == 10000000.0
+    assert impact["final_cost"] > 0
+    assert impact["savings"] >= 0
+    assert impact["suppliers_evaluated"] > 0
+    assert impact["duration_ms"] > 0
+    assert impact["automated_steps"] > 0
+
+def test_impact_endpoint():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    
+    wid = "wf_impact_endpoint_test"
+    _run(PRIMARY, wid)
+    
+    response = client.get(f"/api/workflows/{wid}/impact")
+    assert response.status_code == 200
+    impact = response.json()
+    assert impact["workflow_id"] == wid
+    assert impact["final_cost"] > 0

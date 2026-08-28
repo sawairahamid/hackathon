@@ -70,7 +70,9 @@ def init_db() -> None:
                 plan_json TEXT,
                 report TEXT,
                 chaos_json TEXT,
-                error TEXT
+                error TEXT,
+                workflow_version INTEGER DEFAULT 1,
+                parent_wf_id TEXT
             );
             CREATE TABLE IF NOT EXISTS steps (
                 workflow_id TEXT NOT NULL,
@@ -123,10 +125,44 @@ def init_db() -> None:
                 response TEXT NOT NULL,
                 ts TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS incidents (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                step_id TEXT,
+                type TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                message TEXT NOT NULL,
+                affected_steps_json TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS recovery_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                incident_id TEXT NOT NULL,
+                workflow_id TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                requires_human INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL
+            );
+            
+            -- Alter workflows to add new columns if they do not exist
+            -- (SQLite ALTER TABLE ADD COLUMN does not support IF NOT EXISTS in all versions, 
+            -- but we try to gracefully handle it via python or just rely on fresh DBs for hackathons)
+            
             CREATE INDEX IF NOT EXISTS idx_events_wf ON events(workflow_id, id);
             CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals(status);
             """
         )
+        
+        # safely try to add columns in case the DB exists
+        try:
+            cur.execute("ALTER TABLE workflows ADD COLUMN workflow_version INTEGER DEFAULT 1;")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cur.execute("ALTER TABLE workflows ADD COLUMN parent_wf_id TEXT;")
+        except sqlite3.OperationalError:
+            pass
 
 
 def set_event_loop(loop: asyncio.AbstractEventLoop) -> None:
@@ -134,11 +170,11 @@ def set_event_loop(loop: asyncio.AbstractEventLoop) -> None:
     _loop = loop
 
 
-def create_workflow(wid: str, request: str, chaos: dict[str, Any] | None = None) -> None:
+def create_workflow(wid: str, request: str, chaos: dict[str, Any] | None = None, workflow_version: int = 1, parent_wf_id: str | None = None) -> None:
     with cursor() as cur:
         cur.execute(
-            "INSERT INTO workflows (id, created_at, status, request, chaos_json) VALUES (?,?,?,?,?)",
-            (wid, utcnow(), "pending", request, json.dumps(chaos or {})),
+            "INSERT INTO workflows (id, created_at, status, request, chaos_json, workflow_version, parent_wf_id) VALUES (?,?,?,?,?,?,?)",
+            (wid, utcnow(), "pending", request, json.dumps(chaos or {}), workflow_version, parent_wf_id),
         )
 
 
@@ -312,6 +348,53 @@ def emit(
     }
     _broadcast(wid, event)
     return event
+
+
+def record_incident(
+    iid: str,
+    wid: str,
+    step_id: str | None,
+    itype: str,
+    severity: str,
+    message: str,
+    affected_steps: list[str]
+) -> None:
+    with cursor() as cur:
+        cur.execute(
+            """INSERT INTO incidents (id, workflow_id, step_id, type, severity, message, affected_steps_json, created_at)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (iid, wid, step_id, itype, severity, message, json.dumps(affected_steps), utcnow())
+        )
+
+def list_incidents(wid: str) -> list[dict[str, Any]]:
+    with cursor() as cur:
+        rows = cur.execute(
+            "SELECT * FROM incidents WHERE workflow_id = ? ORDER BY created_at",
+            (wid,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+def record_recovery_action(
+    iid: str,
+    wid: str,
+    action_type: str,
+    reason: str,
+    requires_human: bool
+) -> None:
+    with cursor() as cur:
+        cur.execute(
+            """INSERT INTO recovery_actions (incident_id, workflow_id, action_type, reason, requires_human, created_at)
+               VALUES (?,?,?,?,?,?)""",
+            (iid, wid, action_type, reason, 1 if requires_human else 0, utcnow())
+        )
+
+def list_recovery_actions(wid: str) -> list[dict[str, Any]]:
+    with cursor() as cur:
+        rows = cur.execute(
+            "SELECT * FROM recovery_actions WHERE workflow_id = ? ORDER BY id",
+            (wid,)
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def list_events(wid: str) -> list[dict[str, Any]]:

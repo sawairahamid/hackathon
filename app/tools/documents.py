@@ -68,7 +68,12 @@ class PODoc(FPDF):
         self.set_y(-15)
         self.set_font("Helvetica", "I", 8)
         self.set_text_color(120, 130, 140)
-        self.cell(0, 8, f"Page {self.page_no()}  |  Not valid until approved  |  OrchestrAI HackHorizon 2026", align="C")
+        status_text = getattr(self, "approval_status", None)
+        if status_text:
+            text = f"Page {self.page_no()}  |  Status: {status_text.upper()}  |  OrchestrAI HackHorizon 2026"
+        else:
+            text = f"Page {self.page_no()}  |  Not valid until approved  |  OrchestrAI HackHorizon 2026"
+        self.cell(0, 8, text, align="C")
 
 
 def render_po(
@@ -77,6 +82,8 @@ def render_po(
     entities: dict,
     selected: dict,
     ranking: dict | None = None,
+    approval_status: str | None = None,
+    approval_note: str | None = None,
 ) -> Path:
     OUT.mkdir(parents=True, exist_ok=True)
     currency = entities.get("currency", "PKR")
@@ -84,6 +91,7 @@ def render_po(
     unit = float(selected.get("unit_price") or 0)
     total = float(selected.get("total") or unit * qty)
     pdf = PODoc()
+    pdf.approval_status = approval_status
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
     pdf.set_text_color(20, 24, 28)
@@ -142,8 +150,24 @@ def render_po(
             f"{r.get('name')}: {r.get('reason')}" for r in ranking["rejected"]
         )), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
+    pdf.ln(4)
     pdf.set_font("Helvetica", "I", 9)
-    pdf.multi_cell(0, 5, "This document was drafted by OrchestrAI. It is not a commitment of funds until a human approver signs the workflow in the approval inbox.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if approval_status:
+        pdf.multi_cell(0, 5, "This document was drafted by OrchestrAI. It has been reviewed and a final decision was recorded.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(8)
+        if approval_status.lower() == "approved":
+            pdf.set_text_color(40, 167, 69)
+        else:
+            pdf.set_text_color(220, 53, 69)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 8, _latin(f"HUMAN DECISION: {approval_status.upper()}"))
+        pdf.ln(6)
+        pdf.set_text_color(20, 24, 28)
+        pdf.set_font("Helvetica", "", 10)
+        if approval_note:
+            pdf.multi_cell(0, 6, _latin(f"Note: {approval_note}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    else:
+        pdf.multi_cell(0, 5, "This document was drafted by OrchestrAI. It is not a commitment of funds until a human approver signs the workflow in the approval inbox.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     path = OUT / f"{po_number}.pdf"
     pdf.output(str(path))
