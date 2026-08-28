@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,230 +7,412 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("orchestra-theme");
+        if (t !== "dark" && t !== "light") t = "light";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <style>
-    :root {
-      --bg: #07090c;
-      --panel: #10151c;
-      --panel-2: #151c25;
-      --line: #243040;
-      --text: #dce6ef;
-      --muted: #7d8b99;
-      --phos: #5dffb2;
-      --phos-dim: #1a3d30;
+    html[data-theme="light"] {
+      --bg: #eef2f6;
+      --panel: #ffffff;
+      --panel-2: #f7f9fb;
+      --line: #d5dde6;
+      --text: #1a2430;
+      --muted: #5c6b7a;
+      --phos: #0b8f6a;
+      --phos-dim: #d8f3ea;
+      --amber: #c47b16;
+      --amber-dim: #f8ead2;
+      --alert: #c0394a;
+      --alert-dim: #f8dce0;
+      --blue: #2b6cb0;
+      --cta-fg: #ffffff;
+      --shadow: 0 1px 2px rgba(26, 36, 48, 0.06), 0 8px 24px rgba(26, 36, 48, 0.05);
+      --header-bg: rgba(238, 242, 246, 0.92);
+      --grid: none;
+      color-scheme: light;
+    }
+    html[data-theme="dark"] {
+      --bg: #161b22;
+      --panel: #1e262f;
+      --panel-2: #252e38;
+      --line: #334155;
+      --text: #e8eef4;
+      --muted: #8b9aab;
+      --phos: #2ecc8a;
+      --phos-dim: #16382c;
       --amber: #ffbf5e;
+      --amber-dim: #3d3118;
       --alert: #ff5d73;
+      --alert-dim: #3d1c24;
       --blue: #7ab6ff;
+      --cta-fg: #062016;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.18);
+      --header-bg: rgba(22, 27, 34, 0.92);
+      --grid:
+        linear-gradient(rgba(46, 204, 138, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(46, 204, 138, 0.04) 1px, transparent 1px);
+      color-scheme: dark;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; font-size: 14px; }
     body {
-      background-image:
-        linear-gradient(rgba(93,255,178,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(93,255,178,0.03) 1px, transparent 1px);
+      background-image: var(--grid);
       background-size: 28px 28px;
     }
-    button, textarea, input { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif; }
-    .top {
-      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-      padding: 10px 18px; border-bottom: 1px solid var(--line);
-      background: rgba(7,9,12,0.92); position: sticky; top: 0; z-index: 5;
-    }
-    .mark {
-      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-weight: 600; letter-spacing: 0.08em;
-      color: var(--phos); font-size: 13px;
-    }
-    .mark span { color: var(--muted); font-weight: 400; }
-    .pills { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
-    .pill {
-      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px;
-      border: 1px solid var(--line); padding: 4px 8px; border-radius: 99px; color: var(--muted);
-    }
-    .pill.on { border-color: var(--phos); color: var(--phos); background: var(--phos-dim); }
-    .pill.off { border-color: var(--alert); color: var(--alert); }
-    .clock { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; color: var(--muted); }
-    .shell {
-      display: grid; grid-template-columns: 320px 1fr 340px;
-      gap: 12px; padding: 12px; height: calc(100vh - 52px);
-    }
-    /* Responsive: collapse to single column at ≤1120px */
-    @media (max-width: 1120px) {
-      .shell { grid-template-columns: 1fr; height: auto; }
-      .col { min-height: unset; }
-      /* Prevent card h2 tab labels from overlapping card content on narrow screens */
-      .card h2 { white-space: normal; word-break: break-word; }
-      .card { min-width: 0; }
-    }
-    /* Extra fix for very small phones (375px) */
-    @media (max-width: 480px) {
-      .top { padding: 8px 12px; gap: 10px; }
-      .shell { padding: 8px; gap: 8px; }
-      .card h2 { font-size: 10px; letter-spacing: 0.1em; }
-      .pills { margin-left: 0; width: 100%; }
-      .mark { font-size: 12px; }
-      .ghost, .go, .tiny { font-size: 11px; }
-      .plan-step { font-size: 12px; }
-      textarea { font-size: 11px; }
-    }
-    .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
-    .card {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-      display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden;
-    }
-    .card h2 {
-      margin: 0; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-      color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line);
-      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
-      /* Prevent tab label text from overflowing/clipping into card content */
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .body { padding: 12px 14px; overflow: auto; }
-    textarea {
-      width: 100%; min-height: 120px; resize: vertical; background: var(--panel-2);
-      border: 1px solid var(--line); color: var(--text); padding: 10px; border-radius: 8px;
-      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.45;
-    }
-    .presets { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
-    .ghost, .go, .tiny {
-      cursor: pointer; border-radius: 8px; border: 1px solid var(--line);
-      background: transparent; color: var(--text); text-align: left; padding: 8px 10px; font-size: 12px;
-    }
-    .ghost:hover { border-color: var(--phos); }
-    .go {
-      background: var(--phos); color: #062016; font-weight: 700; text-align: center;
-      letter-spacing: 0.06em; text-transform: uppercase; margin-top: 8px;
-    }
-    .go:disabled { opacity: 0.5; cursor: wait; }
-    .chaos label {
-      display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
-      margin: 4px 0; font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
-    }
-    .plan-step {
-      display: grid; grid-template-columns: 18px 1fr; gap: 8px; padding: 8px 0;
-      border-bottom: 1px dashed var(--line); font-size: 13px;
-    }
-    .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: #334; }
-    .dot.pending { background: #334; }
-    .dot.in_progress { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
-    .dot.done { background: var(--phos); }
-    .dot.failed, .dot.skipped { background: var(--alert); }
-    .step-name { font-weight: 600; }
-    .step-tool { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px; color: var(--muted); }
-    .trace { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11.5px; line-height: 1.5; }
-    .ev { padding: 4px 0; border-bottom: 1px solid #1a222c; }
-    .ev .ts { color: var(--muted); margin-right: 8px; }
-    .ev .ty { color: var(--amber); margin-right: 8px; }
-    .grow { flex: 1; }
-    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 8px; font-size: 12px; }
-    .kv b { color: var(--muted); font-weight: 500; }
-    .report { font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
-    .appr { display: flex; gap: 8px; margin-top: 10px; }
-    .appr button { flex: 1; text-align: center; padding: 10px; font-weight: 700; }
-    .yes { background: var(--phos); color: #062016; border: 0; border-radius: 8px; cursor: pointer; }
-    .no { background: transparent; color: var(--alert); border: 1px solid var(--alert); border-radius: 8px; cursor: pointer; }
-    a { color: var(--phos); }
-    .banner {
-      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; padding: 8px 10px;
-      border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; color: var(--amber);
+    button, textarea, input, summary { font-family: inherit; }
+    button:focus-visible, textarea:focus-visible, summary:focus-visible, a:focus-visible {
+      outline: 2px solid var(--phos);
+      outline-offset: 2px;
     }
 
-    /* ── Stamp animation (approve / reject overlay) ── */
+    .top {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      padding: 12px 18px; border-bottom: 1px solid var(--line);
+      background: var(--header-bg); backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 8;
+    }
+    .mark {
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+      font-weight: 600; letter-spacing: 0.06em; color: var(--phos); font-size: 13px;
+    }
+    .mark span { color: var(--muted); font-weight: 400; letter-spacing: 0.04em; }
+    .pills { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; align-items: center; }
+    .pill {
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 11px;
+      border: 1px solid var(--line); padding: 5px 10px; border-radius: 99px; color: var(--muted);
+      background: var(--panel);
+    }
+    .pill.on { border-color: var(--phos); color: var(--phos); background: var(--phos-dim); }
+    .pill.off { border-color: var(--alert); color: var(--alert); background: var(--alert-dim); }
+    .clock { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; color: var(--muted); }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line);
+      background: var(--panel); color: var(--text); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .icon-btn:hover { border-color: var(--phos); color: var(--phos); }
+    .icon-btn svg { width: 18px; height: 18px; }
+    .runs-toggle { display: none; }
+
+    .shell {
+      display: grid; grid-template-columns: 260px minmax(0, 1fr) 340px;
+      gap: 14px; padding: 14px; height: calc(100dvh - 60px); overflow: hidden;
+    }
+    .col { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow: hidden; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+      display: flex; flex-direction: column; min-height: 0; min-width: 0;
+      overflow: hidden; box-shadow: var(--shadow);
+    }
+    .card h2 {
+      margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.01em;
+      color: var(--text); padding: 12px 16px; border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .card-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 10px 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+    }
+    .card-head h2 { border: 0; padding: 0; }
+    .btn-new {
+      cursor: pointer; border: 1px solid var(--line); background: var(--phos-dim); color: var(--phos);
+      border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .btn-new:hover { border-color: var(--phos); }
+    .id-legend { font-size: 11px; color: var(--muted); margin: 0 0 8px; line-height: 1.4; }
+    .request-card { flex: 0 1 auto; max-height: 40%; }
+    .plan-card { flex: 0 1 auto; max-height: 28%; }
+    .audit-card { flex: 1 1 240px; min-height: 220px; }
+    .body { padding: 14px 16px; overflow: auto; flex: 1; min-height: 0; }
+    .grow { flex: 1; }
+    .muted { color: var(--muted); }
+    .empty {
+      color: var(--muted); font-size: 13px; line-height: 1.5;
+      padding: 8px 0;
+    }
+
+    textarea {
+      width: 100%; min-height: 112px; resize: vertical; background: var(--panel-2);
+      border: 1px solid var(--line); color: var(--text); padding: 12px 14px; border-radius: 10px;
+      font-size: 14px; line-height: 1.5;
+    }
+    textarea::placeholder { color: var(--muted); }
+    .hint { font-size: 12px; color: var(--muted); margin: 8px 0 10px; }
+    .examples-label {
+      font-size: 11px; color: var(--muted); letter-spacing: 0.04em;
+      text-transform: uppercase; margin: 0 0 6px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+    }
+    .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .chip {
+      cursor: pointer; border-radius: 99px; border: 1px solid var(--line);
+      background: var(--panel-2); color: var(--text); padding: 5px 10px; font-size: 12px;
+    }
+    .chip:hover { border-color: var(--phos); color: var(--phos); background: var(--phos-dim); }
+    .go {
+      cursor: pointer; width: 100%; border: 0; border-radius: 10px;
+      background: var(--phos); color: var(--cta-fg); font-weight: 700;
+      text-align: center; letter-spacing: 0.04em; padding: 11px 12px; font-size: 13px;
+      margin-top: 8px;
+    }
+    .go:hover { filter: brightness(1.05); }
+    .go:disabled { opacity: 0.5; cursor: wait; }
+
+    .chaos { margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+    .chaos summary {
+      cursor: pointer; padding: 8px 12px; color: var(--muted); font-size: 12px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
+    }
+    .chaos .chaos-body { padding: 0 12px 10px; }
+    .chaos label {
+      display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
+      margin: 5px 0;
+    }
+
+    .banner {
+      font-size: 13px; padding: 10px 12px; border: 1px solid var(--line);
+      border-radius: 10px; margin-bottom: 12px; background: var(--panel-2); line-height: 1.45;
+    }
+    .banner .raw {
+      display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-style: italic;
+    }
+
+    .dag-wrap { overflow: auto; padding: 4px 0 8px; }
+    .dag-svg { display: block; min-width: 100%; }
+    .dag-edge { fill: none; stroke: var(--line); stroke-width: 2; stroke-linecap: round; }
+    .dag-edge.done { stroke: var(--phos); }
+    .dag-edge.in_progress { stroke: var(--amber); stroke-dasharray: 6 5; animation: dash 0.7s linear infinite; }
+    .dag-edge.failed, .dag-edge.skipped { stroke: var(--alert); }
+    .dag-node-rect { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.5; }
+    .dag-node.done .dag-node-rect { stroke: var(--phos); fill: var(--phos-dim); }
+    .dag-node.in_progress .dag-node-rect { stroke: var(--amber); fill: var(--amber-dim); }
+    .dag-node.failed .dag-node-rect, .dag-node.skipped .dag-node-rect { stroke: var(--alert); fill: var(--alert-dim); }
+    .dag-pip { fill: var(--muted); }
+    .dag-node.pending .dag-pip { fill: var(--muted); }
+    .dag-node.in_progress .dag-pip { fill: var(--amber); animation: pulse 1.2s ease-in-out infinite; }
+    .dag-node.done .dag-pip { fill: var(--phos); }
+    .dag-node.failed .dag-pip, .dag-node.skipped .dag-pip { fill: var(--alert); }
+    .dag-id { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 10px; fill: var(--muted); }
+    .dag-name { font-size: 11px; font-weight: 600; fill: var(--text); }
+    .dag-tool { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 9px; fill: var(--muted); }
+
+    @keyframes dash { to { stroke-dashoffset: -22; } }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .trace { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.5; min-height: 160px; }
+    .ev { padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .ev .ts { color: var(--muted); margin-right: 8px; }
+    .ev .ty { color: var(--amber); margin-right: 8px; }
+
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 8px; font-size: 13px; }
+    .kv b { color: var(--muted); font-weight: 500; }
+    .section-label {
+      font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; margin: 12px 0 8px;
+    }
+    .impact-head { margin-bottom: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+    .savings { color: var(--phos); font-weight: 600; }
+    .healthy { color: var(--phos); font-weight: 600; }
+    .inc-card { border-left: 3px solid var(--alert); padding-left: 10px; margin-bottom: 12px; }
+    .inc-card.ok { border-left-color: var(--phos); }
+    .inc-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; color: var(--alert); }
+    .inc-card.ok .inc-title { color: var(--phos); }
+    .inc-counts { display: flex; justify-content: space-between; margin-bottom: 12px; font-weight: 600; font-size: 11px; }
+
+    .scard {
+      border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+      margin-bottom: 10px; background: var(--panel-2);
+    }
+    .scard.selected { border-color: var(--phos); box-shadow: 0 0 0 1px var(--phos); }
+    .scard.rejected { border-color: var(--alert); opacity: 0.95; }
+    .scard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+    .scard-name { font-weight: 700; font-size: 14px; }
+    .scard-total { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .scard-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 99px; white-space: nowrap;
+      background: var(--phos-dim); color: var(--phos);
+    }
+    .scard.rejected .scard-badge { background: var(--alert-dim); color: var(--alert); }
+    .bar-row { display: grid; grid-template-columns: 72px 1fr 36px; gap: 8px; align-items: center; font-size: 11px; margin: 5px 0; color: var(--muted); }
+    .bar { height: 7px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 99px; background: var(--phos); }
+    .scard.rejected .bar i { background: var(--alert); }
+    .bar-row em { font-style: normal; font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; text-align: right; }
+    .scard-weighted { margin-top: 8px; font-size: 12px; font-weight: 600; }
+    .scard-reason { margin: 8px 0 0; font-size: 12px; color: var(--alert); line-height: 1.4; }
+    .catalog-note { font-size: 12px; color: var(--muted); margin-bottom: 10px; padding: 8px 10px; border-radius: 8px; background: var(--amber-dim); border: 1px solid var(--line); }
+
+    .report { font-size: 13px; white-space: pre-wrap; line-height: 1.55; }
+    .appr { display: flex; gap: 8px; margin-top: 10px; }
+    .appr button { flex: 1; text-align: center; padding: 10px; font-weight: 700; cursor: pointer; border-radius: 8px; }
+    .yes { background: var(--phos); color: var(--cta-fg); border: 0; }
+    .no { background: transparent; color: var(--alert); border: 1px solid var(--alert); }
+    a { color: var(--phos); }
+
+    .run-list { display: flex; flex-direction: column; gap: 6px; }
+    .run-item {
+      text-align: left; width: 100%; cursor: pointer; border: 1px solid var(--line);
+      background: var(--panel-2); border-radius: 10px; padding: 8px 10px; color: var(--text);
+    }
+    .run-item:hover { border-color: var(--phos); }
+    .run-item.active { border-color: var(--phos); background: var(--phos-dim); }
+    .run-id { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 12px; font-weight: 600; color: var(--phos); }
+    .run-kind { font-weight: 400; color: var(--muted); letter-spacing: 0.02em; }
+    .run-req { font-size: 12px; margin: 3px 0; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .run-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); }
+    .status-chip {
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 10px;
+      padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line);
+    }
+    .status-chip.ok { color: var(--phos); border-color: var(--phos); }
+    .status-chip.warn { color: var(--amber); border-color: var(--amber); }
+    .status-chip.bad { color: var(--alert); border-color: var(--alert); }
+
+    .runs-overlay { display: none; }
+
     @keyframes stamp-in {
       0%   { transform: scale(3) rotate(-15deg); opacity: 0; }
       60%  { transform: scale(0.9) rotate(-6deg); opacity: 1; }
       80%  { transform: scale(1.05) rotate(-6deg); opacity: 1; }
       100% { transform: scale(1) rotate(-6deg); opacity: 1; }
     }
-    .stamp-wrap {
-      position: relative;
-      display: inline-block;
-      margin-top: 12px;
-    }
+    .stamp-wrap { position: relative; display: inline-block; margin-top: 12px; }
     .stamp {
-      display: inline-block;
-      padding: 6px 14px;
-      border: 3px solid currentColor;
-      border-radius: 4px;
-      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace;
-      font-weight: 700;
-      font-size: 22px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      opacity: 0.92;
-      transform: rotate(-6deg);
-      animation: stamp-in 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+      display: inline-block; padding: 6px 14px; border: 3px solid currentColor; border-radius: 4px;
+      font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-weight: 700;
+      font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase;
+      opacity: 0.92; transform: rotate(-6deg);
+      animation: stamp-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
     .stamp.approved { color: var(--phos); border-color: var(--phos); }
     .stamp.rejected { color: var(--alert); border-color: var(--alert); }
 
-    /* ── prefers-reduced-motion: skip stamp-in animation, show final state instantly ── */
     @media (prefers-reduced-motion: reduce) {
-      .stamp {
-        animation: none;
-        opacity: 0.92;
-        transform: rotate(-6deg);
+      .stamp { animation: none; opacity: 0.92; transform: rotate(-6deg); }
+      .dag-edge.in_progress { animation: none; stroke-dasharray: none; }
+      .dag-node.in_progress .dag-pip { animation: none; }
+    }
+
+    @media (max-width: 1120px) {
+      html, body { overflow: auto; }
+      .shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
+      .request-card, .plan-card, .audit-card { max-height: none; min-height: 0; }
+      .runs-col { display: none; }
+      .runs-col.open {
+        display: flex; position: fixed; top: 60px; left: 12px; right: 12px;
+        z-index: 12; max-height: min(70vh, 480px); background: var(--panel);
+        border: 1px solid var(--line); border-radius: 12px; padding: 8px;
+        box-shadow: var(--shadow);
       }
+      .runs-overlay.show {
+        display: block; position: fixed; inset: 0; background: rgba(26, 36, 48, 0.35); z-index: 11;
+      }
+      .runs-toggle { display: inline-flex; align-items: center; gap: 6px; }
+      .card { min-width: 0; }
+    }
+    @media (max-width: 480px) {
+      .top { padding: 8px 12px; gap: 8px; }
+      .shell { padding: 8px; gap: 8px; }
+      .mark { font-size: 12px; }
+      .pills { margin-left: 0; width: 100%; }
+      textarea { font-size: 13px; }
     }
   </style>
 </head>
 <body>
+  <div class="runs-overlay" id="runs-overlay"></div>
   <header class="top">
-    <div class="mark">ORCHESTRAI <span>// AGENTIC EXECUTION</span></div>
+    <div class="mark">ORCHESTRAI <span>ops desk</span></div>
     <div class="clock" id="clock"></div>
     <div class="pills">
+      <button class="chip runs-toggle" type="button" id="runs-toggle">History</button>
       <div class="pill" id="pill-api">vendor api …</div>
       <div class="pill" id="pill-llm">llm …</div>
+      <button class="icon-btn" type="button" id="theme-toggle" aria-label="Switch theme" title="Switch theme">
+        <svg id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </svg>
+        <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:none">
+          <path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"/>
+        </svg>
+      </button>
     </div>
   </header>
   <main class="shell">
-    <section class="col">
+    <section class="col runs-col" id="runs-col">
       <div class="card grow">
+        <div class="card-head">
+          <h2>History</h2>
+          <button class="btn-new" type="button" id="new-chat">New chat</button>
+        </div>
+        <div class="body" id="runs"><p class="empty">No chats yet — start one from the request box.</p></div>
+      </div>
+      <div class="card" style="flex: 0 0 auto; max-height: 42%;">
+        <h2>Impact</h2>
+        <div class="body" id="impact"><p class="empty">Run a workflow to see savings, duration, and tool calls.</p></div>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="card request-card">
         <h2>Request</h2>
         <div class="body">
+          <textarea id="prompt" placeholder="Describe a purchase, renewal, expense, or onboarding…"></textarea>
+          <p class="hint">Type your own request. Examples only fill the box.</p>
+          <div class="examples-label">Try an example</div>
           <div class="presets">
-            <button class="ghost" data-preset="laptops">Primary · 50 laptops / PKR 10M</button>
-            <button class="ghost" data-preset="software">Secondary · vendor renewal / $20k</button>
-            <button class="ghost" data-preset="reimburse">Expense · Travel reimbursement</button>
-            <button class="ghost" data-preset="onboarding">Onboarding · New hire setup</button>
+            <button class="chip" type="button" data-preset="laptops">50 laptops / PKR 10M</button>
+            <button class="chip" type="button" data-preset="software">Vendor renewal / $20k</button>
+            <button class="chip" type="button" data-preset="reimburse">Travel reimbursement</button>
+            <button class="chip" type="button" data-preset="onboarding">New hire setup</button>
           </div>
-          <textarea id="prompt">Create a purchase request for 50 laptops under PKR 10 million, compare three suppliers, identify the best option, prepare the purchase order, and send it for approval.</textarea>
-          <div class="chaos">
-            <h2 style="border:0;padding:10px 0 4px;letter-spacing:0.14em;white-space:normal;">Chaos / failure injection</h2>
-            <label><input type="checkbox" id="c-timeout" /> Force vendor timeout (retry)</label>
-            <label><input type="checkbox" id="c-malformed" /> Force malformed payload</label>
-            <label><input type="checkbox" id="c-budget" /> Inflate all quotes over budget</label>
-            <label><input type="checkbox" id="c-price-shock" /> Price shock (some suppliers)</label>
-            <label><input type="checkbox" id="c-multi-fail" /> Multi-failure cascade</label>
-          </div>
-          <button class="go" id="run">Execute workflow</button>
+          <details class="chaos">
+            <summary>Chaos / failure injection</summary>
+            <div class="chaos-body">
+              <label><input type="checkbox" id="c-timeout" /> Force vendor timeout (retry)</label>
+              <label><input type="checkbox" id="c-malformed" /> Force malformed payload</label>
+              <label><input type="checkbox" id="c-budget" /> Inflate all quotes over budget</label>
+              <label><input type="checkbox" id="c-price-shock" /> Price shock (some suppliers)</label>
+              <label><input type="checkbox" id="c-multi-fail" /> Multi-failure cascade</label>
+            </div>
+          </details>
+          <button class="go" id="run" type="button">Execute workflow</button>
         </div>
       </div>
-      <div class="card grow">
-        <h2>Impact & Analytics</h2>
-        <div class="body" id="impact"><span style="color:var(--muted)">Run a workflow to see impact</span></div>
+      <div class="card plan-card">
+        <h2>Plan</h2>
+        <div class="body" id="plan"><p class="empty">Run a workflow to see the plan — the DAG appears before any tool runs.</p></div>
+      </div>
+      <div class="card grow audit-card">
+        <h2>Audit trail</h2>
+        <div class="body trace" id="trace"><p class="empty">Events for this chat appear here as tools run. Open a history item or start a new chat.</p></div>
       </div>
     </section>
+
     <section class="col">
-      <div class="card" style="flex: 0 0 35%;">
-        <h2>Plan (Dynamic DAG)</h2>
-        <div class="body" id="plan"><div class="banner">Submit a request. The DAG appears here before any tool runs — that is how judges can tell this is not a scripted demo.</div></div>
+      <div class="card" style="flex: 0 0 auto; max-height: 28%;">
+        <h2>Incident Center</h2>
+        <div class="body trace" id="incidents"><p class="empty">No incidents — the desk is quiet until a tool fails.</p></div>
       </div>
       <div class="card grow">
-        <h2>Live execution trace</h2>
-        <div class="body trace" id="trace"></div>
-      </div>
-    </section>
-    <section class="col">
-      <div class="card">
-        <h2>Incident Center & Commander</h2>
-        <div class="body trace" id="incidents"><span style="color:var(--muted)">No incidents</span></div>
-      </div>
-      <div class="card" style="flex: 0 0 35%;">
         <h2>Decision X-Ray</h2>
-        <div class="body" id="artifact"><span style="color:var(--muted)">Waiting for ranking…</span></div>
+        <div class="body" id="artifact"><p class="empty">Supplier score cards appear here after ranking.</p></div>
       </div>
       <div class="card grow">
         <h2>Approval Inbox</h2>
-        <div class="body" id="report"></div>
+        <div class="body" id="report"><p class="empty">The human gate lands here when spend is ready to approve.</p></div>
       </div>
     </section>
   </main>
@@ -242,11 +424,111 @@
       reimburse: "Process this employee's travel reimbursement request for Sarah Ahmed: meals $320 (4 days), lodging $750 (3 nights), transport $480. Validate against policy and route for manager approval.",
       onboarding: "Set up onboarding tasks for a new hire starting next Monday: accounts, equipment request (laptop, monitor, headset, keyboard), welcome email."
     };
-    document.querySelectorAll("[data-preset]").forEach(btn => {
-      btn.onclick = () => { $("prompt").value = prompts[btn.dataset.preset]; };
-    });
-    setInterval(() => { $("clock").textContent = new Date().toISOString().replace("T"," ").slice(0,19) + "Z"; }, 1000);
+    const KNOWN_CATALOG = ["laptops", "software_subscription"];
+    const LIVE_STATUSES = new Set(["pending", "planning", "running", "recovering", "replanning"]);
+    const LAST_RUN_KEY = "orchestra-last-run";
+    const KIND_LABEL = { PO: "Purchase", VEN: "Vendor", EXP: "Expense", ONB: "Onboarding", RUN: "Workflow" };
 
+    let es = null;
+    let currentId = null;
+    let lastRequestText = "";
+    let lastPlan = null;
+    let lastStatuses = {};
+    const stepState = {};
+    const seenTraceIds = new Set();
+
+    function displayIdOf(row) {
+      return (row && (row.display_id || row.id)) || "";
+    }
+
+    function kindOf(label) {
+      const prefix = String(label || "").split("-")[0];
+      return KIND_LABEL[prefix] || "Workflow";
+    }
+
+    function rememberRun(id) {
+      currentId = id;
+      if (id) {
+        try { localStorage.setItem(LAST_RUN_KEY, id); } catch (e) { /* ignore */ }
+        if (location.hash !== "#" + id) history.replaceState(null, "", "#" + encodeURIComponent(id));
+      } else {
+        try { localStorage.removeItem(LAST_RUN_KEY); } catch (e) { /* ignore */ }
+        if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    function money(n, c) {
+      if (n == null || n === "") return "N/A";
+      if (c === "USD") return "$" + Number(n).toLocaleString();
+      return (c || "PKR") + " " + Number(n).toLocaleString();
+    }
+
+    function relTime(iso) {
+      if (!iso) return "";
+      const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+      if (Number.isNaN(d.getTime())) return iso;
+      const s = (Date.now() - d.getTime()) / 1000;
+      if (s < 45) return "just now";
+      if (s < 3600) return Math.floor(s / 60) + "m ago";
+      if (s < 86400) return Math.floor(s / 3600) + "h ago";
+      return d.toLocaleDateString();
+    }
+
+    function statusClass(st) {
+      const s = (st || "").toLowerCase();
+      if (["approved", "completed", "done"].includes(s)) return "ok";
+      if (["rejected", "failed", "escalated"].includes(s)) return "bad";
+      return "warn";
+    }
+
+    function catalogKey(item) {
+      const key = (item || "").trim().toLowerCase();
+      if (/(software|vendor|license|saas|renewal|subscription)/.test(key)) return "software_subscription";
+      if (/(laptop|notebook|computer)/.test(key)) return "laptops";
+      return key.replace(/\s+/g, "_") || "laptops";
+    }
+
+    /* ── Theme ── */
+    function syncThemeIcon() {
+      const dark = document.documentElement.getAttribute("data-theme") === "dark";
+      $("icon-sun").style.display = dark ? "block" : "none";
+      $("icon-moon").style.display = dark ? "none" : "block";
+      $("theme-toggle").setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+    }
+    syncThemeIcon();
+    $("theme-toggle").onclick = () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("orchestra-theme", next); } catch (e) { /* ignore */ }
+      syncThemeIcon();
+    };
+
+    document.querySelectorAll("[data-preset]").forEach((btn) => {
+      btn.onclick = () => { $("prompt").value = prompts[btn.dataset.preset]; $("prompt").focus(); };
+    });
+    setInterval(() => { $("clock").textContent = new Date().toISOString().replace("T", " ").slice(0, 19) + "Z"; }, 1000);
+
+    /* ── Mobile runs drawer ── */
+    const runsToggle = $("runs-toggle");
+    const runsCol = $("runs-col");
+    const runsOverlay = $("runs-overlay");
+    function closeRunsDrawer() {
+      runsCol.classList.remove("open");
+      runsOverlay.classList.remove("show");
+    }
+    runsToggle.onclick = () => {
+      const open = runsCol.classList.toggle("open");
+      runsOverlay.classList.toggle("show", open);
+    };
+    runsOverlay.onclick = closeRunsDrawer;
+
+    /* ── Health ── */
     async function health() {
       try {
         const h = await (await fetch("/api/health")).json();
@@ -261,201 +543,429 @@
     }
     health(); setInterval(health, 8000);
 
-    let es = null;
-    let currentId = null;
-    const stepState = {};
-
-    function renderPlan(plan, statuses) {
-      if (!plan) return;
-      const html = [`<div class="banner">${plan.title}<br><span style="color:var(--muted)">${plan.summary} · source ${plan.source}</span></div>`];
-      for (const s of plan.steps) {
-        const st = (statuses && statuses[s.id]) || stepState[s.id] || "pending";
-        html.push(`<div class="plan-step"><div class="dot ${st}"></div><div>
-          <div class="step-name">${s.id} · ${s.name}</div>
-          <div class="step-tool">${s.tool}${s.depends_on?.length ? " ← " + s.depends_on.join(", ") : ""}</div>
-        </div></div>`);
+    /* ── History ── */
+    async function refreshRuns() {
+      try {
+        const rows = await (await fetch("/api/workflows")).json();
+        if (!rows || !rows.length) {
+          $("runs").innerHTML = `<p class="empty">No chats yet — start one from the request box.</p>`;
+          return;
+        }
+        $("runs").innerHTML = `<p class="id-legend">IDs: PO purchase · VEN vendor · EXP expense · ONB onboarding</p>
+          <div class="run-list">${rows.map((r) => {
+          const label = displayIdOf(r);
+          const active = r.id === currentId ? " active" : "";
+          return `<button type="button" class="run-item${active}" data-run="${escapeHtml(r.id)}">
+            <div class="run-id">${escapeHtml(label)} <span class="run-kind">· ${escapeHtml(kindOf(label))}</span></div>
+            <div class="run-req">${escapeHtml(r.request || "")}</div>
+            <div class="run-meta">
+              <span class="status-chip ${statusClass(r.status)}">${escapeHtml((r.status || "").replaceAll("_", " "))}</span>
+              <span>${escapeHtml(relTime(r.created_at))}</span>
+            </div>
+          </button>`;
+        }).join("")}</div>`;
+        $("runs").querySelectorAll("[data-run]").forEach((btn) => {
+          btn.onclick = () => openRun(btn.dataset.run);
+        });
+      } catch (e) {
+        $("runs").innerHTML = `<p class="empty">Could not load history.</p>`;
       }
-      $("plan").innerHTML = html.join("");
+    }
+    refreshRuns();
+
+    function resetComposer() {
+      $("prompt").value = "";
+      ["c-timeout", "c-malformed", "c-budget", "c-price-shock", "c-multi-fail"].forEach((id) => {
+        const el = $(id);
+        if (el) el.checked = false;
+      });
+      $("run").disabled = false;
     }
 
-    function appendTrace(ev) {
+    function clearWorkspace() {
+      if (es) { es.close(); es = null; }
+      Object.keys(stepState).forEach((k) => delete stepState[k]);
+      seenTraceIds.clear();
+      lastRequestText = "";
+      lastPlan = null;
+      lastStatuses = {};
+      $("plan").innerHTML = `<p class="empty">Run a workflow to see the plan — the DAG appears before any tool runs.</p>`;
+      $("trace").innerHTML = `<p class="empty">Events for this chat appear here as tools run.</p>`;
+      $("incidents").innerHTML = `<p class="empty">No incidents — the desk is quiet until a tool fails.</p>`;
+      $("artifact").innerHTML = `<p class="empty">Supplier score cards appear here after ranking.</p>`;
+      $("report").innerHTML = `<p class="empty">The human gate lands here when spend is ready to approve.</p>`;
+      $("impact").innerHTML = `<p class="empty">Run a workflow to see savings, duration, and tool calls.</p>`;
+    }
+
+    function newChat() {
+      rememberRun(null);
+      closeRunsDrawer();
+      resetComposer();
+      clearWorkspace();
+      refreshRuns();
+      $("prompt").focus();
+    }
+    $("new-chat").onclick = newChat;
+
+    function paintEvents(events) {
+      $("trace").innerHTML = "";
+      seenTraceIds.clear();
+      if (!events || !events.length) {
+        $("trace").innerHTML = `<p class="empty">No events recorded for this chat yet.</p>`;
+        return;
+      }
+      events.forEach((ev) => appendTrace(ev, true));
+    }
+
+    function attachLiveStream(id) {
+      if (es) { es.close(); es = null; }
+      es = new EventSource("/api/workflows/" + encodeURIComponent(id) + "/events");
+      es.onmessage = (e) => {
+        const ev = JSON.parse(e.data);
+        appendTrace(ev);
+        if (ev.type === "plan_created" && ev.payload) renderPlan(ev.payload, {});
+        if (ev.type === "approval_requested") {
+          renderApproval(id, { status: "pending_approval" });
+          $("run").disabled = false;
+        }
+        if (["step_done", "tool_result", "report_ready", "approval_requested", "workflow_completed", "escalated", "validation", "impact_ready", "incident_detected", "RECOVERY_ACTION_SELECTED", "REPLAN_COMPLETED"].includes(ev.type)) {
+          refreshSnapshot(id);
+        }
+        if (ev.type === "workflow_completed" || ev.type === "workflow_failed") {
+          $("run").disabled = false;
+          refreshSnapshot(id);
+          refreshRuns();
+        }
+      };
+      es.onerror = () => { /* browser retries; keep painted events */ };
+    }
+
+    async function openRun(id) {
+      rememberRun(id);
+      closeRunsDrawer();
+      if (es) { es.close(); es = null; }
+      Object.keys(stepState).forEach((k) => delete stepState[k]);
+      seenTraceIds.clear();
+      $("trace").innerHTML = `<p class="empty">Loading audit trail…</p>`;
+      try {
+        const res = await fetch("/api/workflows/" + encodeURIComponent(id));
+        if (!res.ok) throw new Error("snapshot " + res.status);
+        const snap = await res.json();
+        rememberRun(snap.id || id);
+        lastRequestText = snap.request || "";
+        if (snap.request) $("prompt").value = snap.request;
+        (snap.steps || []).forEach((s) => { if (s.step_id) stepState[s.step_id] = s.status; });
+        paintEvents(snap.events || []);
+        await refreshSnapshot(id);
+        refreshRuns();
+        if (LIVE_STATUSES.has(snap.status) || snap.status === "pending_approval") {
+          attachLiveStream(id);
+          if (snap.status === "pending_approval") renderApproval(id, snap);
+        }
+      } catch (e) {
+        $("trace").innerHTML = `<p class="empty">Could not load this chat. The demo database may be damaged — stop the server, run scripts/reset_demo.py, and start again.</p>`;
+      }
+    }
+
+    /* ── Plan / DAG ── */
+    function renderPlan(plan, statuses) {
+      if (!plan) return;
+      lastPlan = plan;
+      lastStatuses = statuses || {};
+      const raw = lastRequestText
+        ? `<span class="raw">Request: “${escapeHtml(lastRequestText)}”</span>`
+        : "";
+      const banner = `<div class="banner"><strong>${escapeHtml(plan.title || "Plan")}</strong><br>
+        <span class="muted">${escapeHtml(plan.summary || "")}${plan.source ? " · source " + escapeHtml(plan.source) : ""}</span>${raw}</div>`;
+      const steps = plan.steps || [];
+      if (!steps.length) {
+        $("plan").innerHTML = banner;
+        return;
+      }
+      $("plan").innerHTML = banner + `<div class="dag-wrap">${buildDagSvg(steps, statuses)}</div>`;
+    }
+
+    let dagResizeTimer = 0;
+    window.addEventListener("resize", () => {
+      clearTimeout(dagResizeTimer);
+      dagResizeTimer = setTimeout(() => {
+        if (lastPlan) renderPlan(lastPlan, lastStatuses);
+      }, 120);
+    });
+
+    function buildDagSvg(steps, statuses) {
+      const n = steps.length;
+      const wrap = document.querySelector("#plan .dag-wrap");
+      const hostW = (wrap && wrap.clientWidth) || ($("plan") && $("plan").clientWidth) || 720;
+      const vertical = hostW < 640 || n > 8;
+      const byId = {};
+      steps.forEach((s, i) => { byId[s.id] = i; });
+
+      if (vertical) {
+        const nodeW = Math.max(220, Math.min(hostW - 24, 420));
+        const nodeH = 52;
+        const gap = 28;
+        const padX = 12;
+        const padY = 8;
+        const w = nodeW + padX * 2;
+        const h = padY * 2 + n * nodeH + (n - 1) * gap;
+        let edges = "";
+        let nodes = "";
+        steps.forEach((s, i) => {
+          const st = (statuses && statuses[s.id]) || stepState[s.id] || "pending";
+          const x = padX;
+          const y = padY + i * (nodeH + gap);
+          (s.depends_on || []).forEach((dep) => {
+            const di = byId[dep];
+            if (di == null) return;
+            const y1 = padY + di * (nodeH + gap) + nodeH;
+            const y2 = y;
+            const cx = x + nodeW / 2;
+            const est = edgeStatus(st, (statuses && statuses[dep]) || stepState[dep]);
+            edges += `<path class="dag-edge ${est}" d="M ${cx} ${y1} L ${cx} ${y2}" />`;
+          });
+          nodes += dagNode(s, st, x, y, nodeW, nodeH);
+        });
+        return `<svg class="dag-svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Workflow plan">${edges}${nodes}</svg>`;
+      }
+
+      const nodeW = 128;
+      const nodeH = 58;
+      const gap = 36;
+      const pad = 8;
+      const w = pad * 2 + n * nodeW + (n - 1) * gap;
+      const h = nodeH + pad * 2 + 8;
+      let edges = "";
+      let nodes = "";
+      steps.forEach((s, i) => {
+        const st = (statuses && statuses[s.id]) || stepState[s.id] || "pending";
+        const x = pad + i * (nodeW + gap);
+        const y = pad + 4;
+        (s.depends_on || []).forEach((dep) => {
+          const di = byId[dep];
+          if (di == null) return;
+          const x1 = pad + di * (nodeW + gap) + nodeW;
+          const x2 = x;
+          const midY = y + nodeH / 2;
+          const est = edgeStatus(st, (statuses && statuses[dep]) || stepState[dep]);
+          edges += `<path class="dag-edge ${est}" d="M ${x1} ${midY} C ${x1 + 14} ${midY}, ${x2 - 14} ${midY}, ${x2} ${midY}" />`;
+        });
+        nodes += dagNode(s, st, x, y, nodeW, nodeH);
+      });
+      return `<svg class="dag-svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="Workflow plan">${edges}${nodes}</svg>`;
+    }
+
+    function edgeStatus(targetSt, sourceSt) {
+      if (targetSt === "failed" || targetSt === "skipped") return "failed";
+      if (targetSt === "in_progress") return "in_progress";
+      if (targetSt === "done" && (sourceSt === "done" || !sourceSt)) return "done";
+      if (targetSt === "done") return "done";
+      return "pending";
+    }
+
+    function dagNode(s, st, x, y, nodeW, nodeH) {
+      const name = (s.name || s.id || "").slice(0, 22);
+      const tool = (s.tool || "").slice(0, 24);
+      return `<g class="dag-node ${escapeHtml(st)}" transform="translate(${x},${y})">
+        <rect class="dag-node-rect" x="0" y="0" width="${nodeW}" height="${nodeH}" rx="10"/>
+        <circle class="dag-pip" cx="12" cy="14" r="4"/>
+        <text class="dag-id" x="22" y="17">${escapeHtml(s.id || "")}</text>
+        <text class="dag-name" x="10" y="34">${escapeHtml(name)}</text>
+        <text class="dag-tool" x="10" y="48">${escapeHtml(tool)}</text>
+      </g>`;
+    }
+
+    function appendTrace(ev, restoring) {
+      const eid = ev && ev.id;
+      if (eid != null) {
+        if (seenTraceIds.has(eid)) return;
+        seenTraceIds.add(eid);
+      }
+      const empty = $("trace").querySelector(".empty");
+      if (empty) empty.remove();
       const row = document.createElement("div");
       row.className = "ev";
       const ts = (ev.ts || "").slice(11, 19);
-      row.innerHTML = `<span class="ts">${ts}</span><span class="ty">${ev.type}</span>${ev.message || ""}`;
+      row.innerHTML = `<span class="ts">${escapeHtml(ts)}</span><span class="ty">${escapeHtml(ev.type || "")}</span>${escapeHtml(ev.message || "")}`;
       $("trace").prepend(row);
-      if (ev.step_id && ev.type === "step_started") stepState[ev.step_id] = "in_progress";
-      if (ev.step_id && ev.type === "step_done") stepState[ev.step_id] = "done";
-      if (ev.step_id && (ev.type === "step_failed" || ev.type === "escalated")) stepState[ev.step_id] = "failed";
-    }
-
-    function money(n, c) {
-      if (c === "USD") return "$" + Number(n).toLocaleString();
-      return (c || "PKR") + " " + Number(n).toLocaleString();
-    }
-
-    async function refreshSnapshot(id) {
-      const snap = await (await fetch("/api/workflows/" + id)).json();
-      const plan = snap.plan;
-      const statuses = {};
-      (snap.steps || []).forEach(s => statuses[s.step_id] = s.status);
-      renderPlan(plan, statuses);
-      
-      // Update Incidents
-      try {
-          const inc_res = await fetch("/api/workflows/" + id + "/incidents");
-          if (inc_res.ok) {
-              const {incidents, actions} = await inc_res.json();
-              if (!incidents || incidents.length === 0) {
-                  $("incidents").innerHTML = `<div style="color:var(--phos); font-weight: 600;">✓ SYSTEM HEALTHY</div><div style="color:var(--muted); margin-top: 4px;">No active incidents</div>`;
-              } else {
-                  const active = incidents.filter(i => !actions.find(a => a.incident_id === i.id) || actions.find(a => a.incident_id === i.id && a.action_type !== 'RESOLVED' && a.action_type !== 'ESCALATE'));
-                  const resolved = incidents.filter(i => actions.find(a => a.incident_id === i.id));
-                  
-                  let incHtml = `<div style="display:flex; justify-content:space-between; margin-bottom: 12px; font-weight: 600; font-size: 11px;">
-                      <span style="color:var(--alert)">ACTIVE INCIDENTS: ${active.length}</span>
-                      <span style="color:var(--phos)">RESOLVED: ${resolved.length}</span>
-                  </div>`;
-                  
-                  for (const inc of incidents) {
-                      const act = actions.find(a => a.incident_id === inc.id);
-                      const isResolved = !!act;
-                      const color = isResolved ? 'var(--phos)' : 'var(--alert)';
-                      const icon = isResolved ? '✓' : '⚠';
-                      
-                      incHtml += `<div class="ev" style="border-left: 2px solid ${color}; padding-left: 10px; margin-bottom: 12px;">
-                          <div style="color:${color}; font-weight: 600; font-size: 12px; margin-bottom: 4px;">${icon} ${inc.type.replaceAll('_', ' ')}</div>
-                          <div class="kv">
-                              <b>Severity:</b><div>${inc.severity}</div>
-                              <b>Status:</b><div>${isResolved ? 'RESOLVED' : 'RECOVERING'}</div>
-                              <b>Step:</b><div>${inc.step_id || 'N/A'}</div>
-                              <b>Message:</b><div>${inc.message}</div>
-                          </div>`;
-                          
-                      if (act) {
-                          incHtml += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);" class="kv">
-                              <b>Agent Action:</b><div style="color:var(--phos)">${act.action_type}</div>
-                              <b>Reason:</b><div>${act.reason}</div>
-                          </div>`;
-                      }
-                      incHtml += `</div>`;
-                  }
-                  $("incidents").innerHTML = incHtml;
-              }
-          }
-          
-          const imp_res = await fetch("/api/workflows/" + id + "/impact");
-          if (imp_res.ok) {
-              const imp = await imp_res.json();
-              
-              if (!imp || !imp.workflow_id) {
-                  $("impact").innerHTML = `<span style="color:var(--muted)">Run a workflow to see impact</span>`;
-              } else {
-                  const wf_type = snap.plan?.title || "Workflow";
-                  const pct = imp.savings_percent ? imp.savings_percent + "%" : "0%";
-                  const budget_str = money(imp.budget, snap.entities?.currency || "PKR");
-                  const cost_str = imp.final_cost ? money(imp.final_cost, snap.entities?.currency || "PKR") : "N/A";
-                  const savings_str = imp.savings ? money(imp.savings, snap.entities?.currency || "PKR") : "0";
-                  
-                  $("impact").innerHTML = `
-                      <div style="font-weight: 600; color: var(--text); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
-                          <div style="font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;">WORKFLOW</div>
-                          <div>${wf_type}</div>
-                          <div style="font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 8px;">STATUS</div>
-                          <div style="color: var(--amber);">${imp.status?.replaceAll('_', ' ') || 'Running...'}</div>
-                      </div>
-                      
-                      <div style="font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">FINANCIAL IMPACT</div>
-                      <div class="kv" style="margin-bottom: 16px;">
-                          <b>Budget:</b><div>${budget_str}</div>
-                          <b>Final Cost:</b><div>${cost_str}</div>
-                          <b>Savings:</b><div style="color: var(--phos); font-weight: 600;">${savings_str} (${pct})</div>
-                      </div>
-                      
-                      <div style="font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;">OPERATIONS</div>
-                      <div class="kv" style="margin-bottom: 16px;">
-                          <b>Evaluated:</b><div>${imp.suppliers_evaluated}</div>
-                          <b>Rejected:</b><div>${imp.suppliers_rejected}</div>
-                          <b>Auto Steps:</b><div>${imp.automated_steps}</div>
-                          <b>Tool Calls:</b><div>${imp.tool_calls}</div>
-                          <b>Replans:</b><div>${imp.workflow_replans}</div>
-                          <b>Recoveries:</b><div>${imp.recovery_events}</div>
-                          <b>Val Fails:</b><div>${imp.validation_failures}</div>
-                          <b>Human Int:</b><div>${imp.human_interventions}</div>
-                      </div>
-                      
-                      <div class="kv">
-                          <b>Duration:</b><div>${(imp.duration_ms / 1000).toFixed(2)}s</div>
-                      </div>
-                  `;
-              }
-          }
-      } catch (e) {
-          console.error("Error updating impact/incidents", e);
+      if (!restoring) {
+        if (ev.step_id && ev.type === "step_started") stepState[ev.step_id] = "in_progress";
+        if (ev.step_id && ev.type === "step_done") stepState[ev.step_id] = "done";
+        if (ev.step_id && (ev.type === "step_failed" || ev.type === "escalated")) stepState[ev.step_id] = "failed";
       }
-      const ranking = (snap.steps || []).find(s => s.tool === "rank_suppliers");
-      const po = (snap.steps || []).find(s => s.tool === "generate_purchase_order");
+    }
+
+    /* ── Snapshot ── */
+    async function refreshSnapshot(id) {
+      try {
+        const res = await fetch("/api/workflows/" + id);
+        if (!res.ok) throw new Error("snapshot " + res.status);
+        const snap = await res.json();
+        const plan = snap.plan;
+        const statuses = {};
+        (snap.steps || []).forEach((s) => { statuses[s.step_id] = s.status; });
+        if (snap.request) lastRequestText = snap.request;
+        renderPlan(plan, statuses);
+        await updateIncidents(id);
+        await updateImpact(id, snap);
+        renderXray(snap);
+        renderApproval(id, snap);
+      } catch (e) {
+        console.error("snapshot failed", e);
+      }
+    }
+
+    async function updateIncidents(id) {
+      try {
+        const inc_res = await fetch("/api/workflows/" + id + "/incidents");
+        if (!inc_res.ok) return;
+        const { incidents, actions } = await inc_res.json();
+        if (!incidents || incidents.length === 0) {
+          $("incidents").innerHTML = `<div class="healthy">System healthy</div><div class="muted" style="margin-top:4px">No active incidents</div>`;
+          return;
+        }
+        const resolved = incidents.filter((i) => actions.find((a) => a.incident_id === i.id));
+        const active = incidents.length - resolved.length;
+        let html = `<div class="inc-counts"><span style="color:var(--alert)">Active: ${active}</span><span style="color:var(--phos)">Resolved: ${resolved.length}</span></div>`;
+        for (const inc of incidents) {
+          const act = actions.find((a) => a.incident_id === inc.id);
+          const isResolved = !!act;
+          html += `<div class="inc-card${isResolved ? " ok" : ""}">
+            <div class="inc-title">${isResolved ? "✓" : "⚠"} ${escapeHtml((inc.type || "").replaceAll("_", " "))}</div>
+            <div class="kv">
+              <b>Severity</b><div>${escapeHtml(inc.severity)}</div>
+              <b>Status</b><div>${isResolved ? "Resolved" : "Recovering"}</div>
+              <b>Step</b><div>${escapeHtml(inc.step_id || "N/A")}</div>
+              <b>Message</b><div>${escapeHtml(inc.message)}</div>
+            </div>`;
+          if (act) {
+            html += `<div class="kv" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)">
+              <b>Agent action</b><div style="color:var(--phos)">${escapeHtml(act.action_type)}</div>
+              <b>Reason</b><div>${escapeHtml(act.reason)}</div>
+            </div>`;
+          }
+          html += `</div>`;
+        }
+        $("incidents").innerHTML = html;
+      } catch (e) { /* ignore */ }
+    }
+
+    async function updateImpact(id, snap) {
+      try {
+        const imp_res = await fetch("/api/workflows/" + id + "/impact");
+        if (!imp_res.ok) return;
+        const imp = await imp_res.json();
+        if (!imp || !imp.workflow_id) {
+          $("impact").innerHTML = `<p class="empty">Run a workflow to see savings, duration, and tool calls.</p>`;
+          return;
+        }
+        const cur = snap.entities?.currency || "PKR";
+        const pct = imp.savings_percent ? imp.savings_percent + "%" : "0%";
+        $("impact").innerHTML = `
+          <div class="impact-head">
+            <div class="section-label" style="margin:0 0 4px">Workflow</div>
+            <div>${escapeHtml(snap.plan?.title || "Workflow")}</div>
+            <div class="section-label">Status</div>
+            <div style="color:var(--amber)">${escapeHtml((imp.status || "").replaceAll("_", " ") || "Running")}</div>
+          </div>
+          <div class="section-label">Financial impact</div>
+          <div class="kv" style="margin-bottom:12px">
+            <b>Budget</b><div>${escapeHtml(money(imp.budget, cur))}</div>
+            <b>Final cost</b><div>${escapeHtml(imp.final_cost ? money(imp.final_cost, cur) : "N/A")}</div>
+            <b>Savings</b><div class="savings">${escapeHtml(money(imp.savings || 0, cur))} (${escapeHtml(pct)})</div>
+          </div>
+          <div class="section-label">Operations</div>
+          <div class="kv">
+            <b>Evaluated</b><div>${imp.suppliers_evaluated ?? "—"}</div>
+            <b>Rejected</b><div>${imp.suppliers_rejected ?? "—"}</div>
+            <b>Auto steps</b><div>${imp.automated_steps ?? "—"}</div>
+            <b>Tool calls</b><div>${imp.tool_calls ?? "—"}</div>
+            <b>Replans</b><div>${imp.workflow_replans ?? "—"}</div>
+            <b>Recoveries</b><div>${imp.recovery_events ?? "—"}</div>
+            <b>Human int.</b><div>${imp.human_interventions ?? "—"}</div>
+            <b>Duration</b><div>${imp.duration_ms != null ? (imp.duration_ms / 1000).toFixed(2) + "s" : "—"}</div>
+          </div>`;
+      } catch (e) { /* ignore */ }
+    }
+
+    function scoreBar(label, value) {
+      const v = Math.max(0, Math.min(100, Number(value) || 0));
+      return `<div class="bar-row"><span>${escapeHtml(label)}</span><div class="bar"><i style="width:${v}%"></i></div><em>${v}</em></div>`;
+    }
+
+    function supplierCard(r, currency, kind, extra) {
+      const scores = r.scores || {};
+      const badge = kind === "selected" ? "Selected" : kind === "rejected" ? "Rejected" : "Ranked";
+      return `<div class="scard ${kind}">
+        <div class="scard-head">
+          <div>
+            <div class="scard-name">${escapeHtml(r.name || r.id)}</div>
+            <div class="scard-total">${escapeHtml(money(r.total, currency))}</div>
+          </div>
+          <div class="scard-badge">${badge}</div>
+        </div>
+        ${scoreBar("Price 50%", scores.price)}
+        ${scoreBar("Delivery 30%", scores.delivery)}
+        ${scoreBar("Warranty 20%", scores.warranty)}
+        <div class="scard-weighted">Weighted ${scores.weighted ?? "—"}</div>
+        ${extra || ""}
+      </div>`;
+    }
+
+    function renderXray(snap) {
+      const ranking = (snap.steps || []).find((s) => s.tool === "rank_suppliers");
+      const po = (snap.steps || []).find((s) => s.tool === "generate_purchase_order");
+      const item = snap.entities?.item;
+      const intent = snap.entities?.intent;
+      let art = "";
+      if (intent && intent !== "other") {
+        const key = catalogKey(item);
+        if (item && item.toLowerCase() !== "item" && !KNOWN_CATALOG.includes(key)) {
+          art += `<div class="catalog-note">No catalog for “${escapeHtml(item)}” yet — quotes use the laptop catalog fallback so the pipeline can still complete.</div>`;
+        }
+      }
       const sel = ranking?.output?.selected;
       const rejected = ranking?.output?.rejected || [];
-      let art = "";
+      const ranked = ranking?.output?.ranked || [];
+      const cur = ranking?.output?.currency || snap.entities?.currency || "PKR";
       if (sel) {
-        art += `<div class="kv" style="margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line);">
-          <b>Selected:</b><div style="color:var(--phos)">${sel.name}</div>
-          <b>Total:</b><div>${money(sel.total, ranking.output.currency)}</div>
-          <b>Scores:</b><div>Price: ${sel.scores?.price} | Delivery: ${sel.scores?.delivery} | Warranty: ${sel.scores?.warranty}</div>
-          <b>Weighted:</b><div>${sel.scores?.weighted}</div>
-        </div>`;
+        const poLink = po?.output?.url
+          ? `<p style="margin:10px 0 0"><a href="${escapeHtml(po.output.url)}" target="_blank" rel="noopener">Open ${escapeHtml(po.output.po_number || "PO")}.pdf</a></p>`
+          : "";
+        art += supplierCard(sel, cur, "selected", poLink);
       }
-      
-      if (ranking?.output?.ranked?.length) {
-          art += `<div style="margin-bottom:8px; font-weight:bold; font-size:11px; text-transform:uppercase; color:var(--muted);">All Evaluated Suppliers</div>`;
-          ranking.output.ranked.forEach(r => {
-              if (sel && r.id === sel.id) return;
-              art += `<div class="kv" style="margin-bottom: 6px;">
-                  <b>${r.name}:</b><div>${r.scores?.weighted} (P:${r.scores?.price} D:${r.scores?.delivery} W:${r.scores?.warranty})</div>
-              </div>`;
-          });
-      }
-      
-      if (rejected.length) {
-        art += `<div style="margin-bottom:8px; font-weight:bold; font-size:11px; text-transform:uppercase; color:var(--alert); margin-top:12px;">Rejected Suppliers</div>`;
-        art += `<p style="font-size:12px;margin-top:0;">` + rejected.map(r => `• <b>${r.name}</b>: ${r.reason} <span style="color:var(--muted)">[${r.scores?.weighted || 'N/A'}]</span>`).join("<br>") + "</p>";
-      }
-      if (po?.output?.url) {
-        art += `<p><a href="${po.output.url}" target="_blank">Open ${po.output.po_number}.pdf</a></p>`;
-      }
-      $("artifact").innerHTML = art || `<span style="color:var(--muted)">Status: ${snap.status}</span>`;
+      ranked.forEach((r) => {
+        if (sel && r.id === sel.id) return;
+        art += supplierCard(r, cur, "ranked");
+      });
+      rejected.forEach((r) => {
+        art += supplierCard(r, cur, "rejected", `<p class="scard-reason">${escapeHtml(r.reason || "Rejected")}</p>`);
+      });
+      $("artifact").innerHTML = art || `<p class="empty">Status: ${escapeHtml((snap.status || "").replaceAll("_", " "))}. Score cards appear after ranking.</p>`;
+    }
 
+    function renderApproval(id, snap) {
       let html = "";
       if (snap.status === "pending_approval" || snap.status === "approved" || snap.status === "rejected") {
-        html += `<div class="banner">Human gate · ${snap.status.replaceAll("_"," ")}</div>`;
+        html += `<div class="banner">Human gate · ${escapeHtml(snap.status.replaceAll("_", " "))}</div>`;
         if (snap.status === "pending_approval") {
           html += `<div class="appr">
-            <button class="yes" id="btn-yes">Approve spend</button>
-            <button class="no" id="btn-no">Reject</button>
+            <button class="yes" id="btn-yes" type="button">Approve spend</button>
+            <button class="no" id="btn-no" type="button">Reject</button>
           </div>`;
         }
       }
-      if (snap.report) html += `<div class="report">${snap.report.replace(/[&<>]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[s]))}</div>`;
+      if (snap.report) html += `<div class="report">${escapeHtml(snap.report)}</div>`;
+      if (!html) html = `<p class="empty">The human gate lands here when spend is ready to approve.</p>`;
       const reportEl = $("report");
       reportEl.innerHTML = html;
-
-      // Render stamp overlay for approved / rejected decisions
-      if (snap.status === "approved" || snap.status === "rejected") {
-        renderStamp(reportEl, snap.status);
-      }
+      if (snap.status === "approved" || snap.status === "rejected") renderStamp(reportEl, snap.status);
       const yes = $("btn-yes"), no = $("btn-no");
       if (yes) yes.onclick = () => decide(id, "approve");
       if (no) no.onclick = () => decide(id, "reject");
     }
 
-    /**
-     * Renders the stamp overlay for approved / rejected states.
-     * CSS @keyframes stamp-in drives the animation.
-     * @media (prefers-reduced-motion: reduce) disables it, showing the final state instantly.
-     */
     function renderStamp(container, decision) {
-      // Remove any previous stamp so re-renders are clean
       const old = container.querySelector(".stamp-wrap");
       if (old) old.remove();
       if (decision !== "approved" && decision !== "rejected") return;
@@ -470,17 +980,26 @@
 
     async function decide(id, decision) {
       await fetch("/api/workflows/" + id + "/approval", {
-        method: "POST", headers: {"Content-Type":"application/json"},
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision, note: decision === "approve" ? "Approved at judging table" : "Rejected in demo" })
       });
-      refreshSnapshot(id);
+      await refreshSnapshot(id);
+      refreshRuns();
     }
 
     $("run").onclick = async () => {
+      const text = $("prompt").value.trim();
+      if (text.length < 3) {
+        $("prompt").focus();
+        return;
+      }
       $("run").disabled = true;
-      $("trace").innerHTML = "";
-      Object.keys(stepState).forEach(k => delete stepState[k]);
+      Object.keys(stepState).forEach((k) => delete stepState[k]);
+      seenTraceIds.clear();
       if (es) { es.close(); es = null; }
+      lastRequestText = text;
+      $("trace").innerHTML = `<p class="empty">Starting workflow…</p>`;
+      $("plan").innerHTML = `<p class="empty">Building plan…</p>`;
       const chaos = {
         force_timeout: $("c-timeout").checked,
         force_malformed: $("c-malformed").checked,
@@ -489,27 +1008,43 @@
         force_multi_failure: $("c-multi-fail").checked,
         extra_latency_ms: 0
       };
-      const res = await fetch("/api/workflows", {
-        method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ request: $("prompt").value, chaos })
-      });
-      const data = await res.json();
-      currentId = data.id;
-      renderPlan(data.plan, {});
-      es = new EventSource("/api/workflows/" + data.id + "/events");
-      es.onmessage = (e) => {
-        const ev = JSON.parse(e.data);
-        appendTrace(ev);
-        if (ev.type === "plan_created") renderPlan(ev.payload, {});
-        if (["step_done","tool_result","report_ready","approval_requested","workflow_completed","escalated","validation","impact_ready","incident_detected","RECOVERY_ACTION_SELECTED","REPLAN_COMPLETED"].includes(ev.type)) {
-          refreshSnapshot(data.id);
-        }
-        if (ev.type === "workflow_completed" || ev.type === "workflow_failed") {
-          $("run").disabled = false;
-          refreshSnapshot(data.id);
-        }
-      };
+      try {
+        const res = await fetch("/api/workflows", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ request: text, chaos })
+        });
+        const data = await res.json();
+        rememberRun(data.id);
+        renderPlan(data.plan, {});
+        paintEvents(data.events || []);
+        refreshRuns();
+        attachLiveStream(data.id);
+      } catch (e) {
+        $("run").disabled = false;
+        $("trace").innerHTML = `<p class="empty">Could not start the workflow.</p>`;
+      }
     };
+
+    window.addEventListener("hashchange", () => {
+      const id = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+      if (id && id !== currentId) openRun(id);
+    });
+
+    (async function bootLastChat() {
+      const fromHash = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+      let saved = fromHash;
+      if (!saved) {
+        try { saved = localStorage.getItem(LAST_RUN_KEY) || ""; } catch (e) { saved = ""; }
+      }
+      if (saved) {
+        await openRun(saved);
+        return;
+      }
+      try {
+        const rows = await (await fetch("/api/workflows")).json();
+        if (rows && rows[0] && rows[0].id) await openRun(rows[0].id);
+      } catch (e) { /* empty desk */ }
+    })();
   </script>
 </body>
 </html>

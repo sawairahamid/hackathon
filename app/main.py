@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
-import uuid
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -53,11 +55,16 @@ def _snapshot(wid: str) -> dict:
     row = trace.get_workflow(wid)
     if not row:
         raise HTTPException(404, "workflow not found")
+    real_id = row["id"]
     snap = _decode_workflow(row)
-    snap["steps"] = trace.list_steps(wid)
-    snap["events"] = trace.list_events(wid)
-    snap["tool_calls"] = trace.list_tool_calls(wid)
-    snap["approvals"] = [a for a in trace.list_approvals() if a["workflow_id"] == wid]
+    snap["display_id"] = snap.get("display_id") or real_id
+    snap["steps"] = trace.safe_query(lambda: trace.list_steps(real_id), [])
+    snap["events"] = trace.safe_query(lambda: trace.list_events(real_id), [])
+    snap["tool_calls"] = trace.safe_query(lambda: trace.list_tool_calls(real_id), [])
+    snap["approvals"] = trace.safe_query(
+        lambda: [a for a in trace.list_approvals() if a["workflow_id"] == real_id],
+        [],
+    )
     return snap
 
 
@@ -92,21 +99,24 @@ def tools() -> dict:
 
 @app.get("/api/workflows")
 def workflows() -> list[dict]:
-    return trace.list_workflows()
+    return trace.safe_query(trace.list_workflows, [])
 
 
 @app.post("/api/workflows")
 async def create_workflow(body: CreateWorkflowRequest) -> dict:
-    wid = "wf_" + uuid.uuid4().hex[:12]
     chaos = body.chaos.model_dump()
-    trace.create_workflow(wid, body.request, chaos)
-    trace.emit(wid, "workflow_created", "Request received", payload={"chaos": chaos})
-
     entities, parse_tag = parse_request(body.request)
+    prefix = trace.infer_prefix(
+        body.request,
+        intent=entities.intent,
+        intent_detail=(entities.extra or {}).get("intent_detail"),
+    )
+    wid = trace.create_workflow(None, body.request, chaos, prefix=prefix)
     extra = dict(entities.extra or {})
     extra["workflow_id"] = wid
     extra["chaos"] = chaos
     entities.extra = extra
+    trace.emit(wid, "workflow_created", "Request received", payload={"chaos": chaos})
     trace.set_workflow_fields(
         wid,
         status="planning",
@@ -145,12 +155,15 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
 
+    row = trace.get_workflow(wid) or {}
     return {
         "id": wid,
+        "display_id": row.get("display_id") or wid,
         "entities": json.loads(entities.model_dump_json()),
         "plan": json.loads(plan.model_dump_json()),
         "parse_provider": parse_tag,
         "plan_provider": plan_tag,
+        "events": trace.safe_query(lambda: trace.list_events(wid), []),
     }
 
 
@@ -160,8 +173,12 @@ def get_workflow(wid: str) -> dict:
 
 @app.get("/api/workflows/{wid}/incidents")
 def get_incidents(wid: str) -> dict:
-    incidents = trace.list_incidents(wid)
-    actions = trace.list_recovery_actions(wid)
+    wf = trace.get_workflow(wid)
+    if not wf:
+        raise HTTPException(404, "workflow not found")
+    real_id = wf["id"]
+    incidents = trace.safe_query(lambda: trace.list_incidents(real_id), [])
+    actions = trace.safe_query(lambda: trace.list_recovery_actions(real_id), [])
     return {"incidents": incidents, "actions": actions}
 
 from app.impact import calculate_impact
@@ -171,25 +188,39 @@ def get_impact(wid: str) -> dict:
     wf = trace.get_workflow(wid)
     if not wf:
         raise HTTPException(404, "workflow not found")
-    return calculate_impact(wid)
+    real_id = wf["id"]
+    try:
+        return calculate_impact(real_id)
+    except Exception:
+        log.exception("impact failed for %s", real_id)
+        return {"workflow_id": real_id, "status": wf.get("status")}
 
 
 @app.get("/api/workflows/{wid}/events")
 async def stream_events(wid: str):
-    if not trace.get_workflow(wid):
+    row = trace.get_workflow(wid)
+    if not row:
         raise HTTPException(404, "workflow not found")
+    real_id = row["id"]
 
     async def gen():
+        # Chrome buffers SSE until ~2KB unless we pad and disable transforms.
+        yield "retry: 1500\n"
+        yield ":" + (" " * 2048) + "\n\n"
         seen: set[int] = set()
-        q = trace.subscribe(wid)
+        q = trace.subscribe(real_id)
         try:
-            for ev in trace.list_events(wid):
+            for ev in trace.list_events(real_id):
                 eid = ev.get("id")
                 if eid is not None:
                     seen.add(eid)
                 yield f"data: {json.dumps(ev, default=str)}\n\n"
             while True:
-                ev = await q.get()
+                try:
+                    ev = await asyncio.wait_for(q.get(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
                 eid = ev.get("id")
                 if eid in seen:
                     continue
@@ -200,12 +231,16 @@ async def stream_events(wid: str):
                     await asyncio.sleep(0.05)
                     break
         finally:
-            trace.unsubscribe(wid, q)
+            trace.unsubscribe(real_id, q)
 
     return StreamingResponse(
         gen(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
@@ -216,6 +251,10 @@ def approvals(status: str | None = "pending_approval") -> list[dict]:
 
 @app.post("/api/workflows/{wid}/approval")
 def decide(wid: str, body: ApprovalDecision) -> dict:
+    wf = trace.get_workflow(wid)
+    if not wf:
+        raise HTTPException(404, "workflow not found")
+    wid = wf["id"]
     rec = trace.resolve_approval(wid, body.decision, body.note)
     if not rec:
         raise HTTPException(404, "no approval request for this workflow")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
@@ -7,6 +8,16 @@ from app import trace
 from app.models import Entities, Plan, PlanStep, ToolResult
 from app.tools import invoke, load_all
 from app.incident.commander import handle_incident
+
+log = logging.getLogger(__name__)
+
+
+def _emit_impact(wid: str) -> None:
+    try:
+        from app.impact import calculate_impact
+        trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
+    except Exception:
+        log.exception("impact analytics failed for %s", wid)
 
 
 def _dig(obj: Any, parts: list[str]) -> Any:
@@ -261,8 +272,7 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
             trace.emit(wid, "escalated", f"{step.name} failed: {result.error}", step_id=step.id)
             _compile_best_effort(wid, ent, outputs, tools_used, status="escalated")
             trace.emit(wid, "workflow_completed", "Workflow escalated")
-            from app.impact import calculate_impact
-            trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
+            _emit_impact(wid)
             return "escalated"
 
         statuses[step.id] = "done"
@@ -281,8 +291,7 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
         trace.set_workflow_fields(wid, status="pending_approval")
     trace.emit(wid, "approval_requested", "Waiting for human approval — agent will not auto-approve spend")
     trace.emit(wid, "workflow_completed", "Execution finished; approval gate is open")
-    from app.impact import calculate_impact
-    trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
+    _emit_impact(wid)
     return "pending_approval"
 
 
