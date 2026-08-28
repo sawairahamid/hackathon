@@ -1,18 +1,48 @@
-.venv/
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
 *.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets
 .env
+
+# Database files (runtime-generated)
 data/*.db
+data/*.db-shm
+data/*.db-wal
 data/*.sqlite
 data/*.sqlite3
-app/data/*.db
-generated/
-artifacts/
-orchestrai.db
+*.db
+
+# Generated output (PDFs, etc.)
+generated/*.pdf
+
+# Sequence counters are runtime state — keep them gitignored too
+# (the files exist in repo as reset state: {"n": 1})
+
+# Logs
+*.log
+logs/
+
+# Test / coverage artefacts
 .pytest_cache/
 .coverage
 htmlcov/
-*.log
+artifacts/
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Node / frontend build artefacts
+node_modules/
+dist/
+build/
