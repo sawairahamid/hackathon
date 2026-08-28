@@ -78,6 +78,7 @@ def _run(text: str, wid: str, chaos: dict | None = None) -> str:
     ent.extra = extra
     plan = template_plan(ent)
     trace.create_workflow(wid, text, extra["chaos"])
+    trace.set_workflow_fields(wid, entities_json=ent.model_dump_json(), plan_json=plan.model_dump_json())
     return run_workflow(wid, ent, plan)
 
 
@@ -121,10 +122,11 @@ def test_secondary_use_case_same_pipeline_no_new_code():
 
 def test_over_budget_chaos_escalates_instead_of_forging_a_po():
     chaos = ChaosConfig(force_over_budget=True).model_dump()
+    chaos["use_fallback"] = True
     # Local fallback ignores HTTP chaos flags; force the tool path by invoking rank on inflated quotes.
     quotes = invoke(
         "fetch_suppliers",
-        {"item": "laptops", "quantity": 50, "currency": "PKR", "budget": 10_000_000},
+        {"item": "laptops", "quantity": 50, "currency": "PKR", "budget": 10_000_000, "chaos": chaos},
     ).data["quotes"]
     for q in quotes:
         q["unit_price"] *= 5
@@ -299,3 +301,35 @@ def test_onboarding_end_to_end():
     # Approval gate must be queued
     apprv = trace.list_approvals("pending_approval")
     assert any(a["workflow_id"] == wid for a in apprv), "Approval record must exist for onboarding workflow"
+
+
+def test_impact_generated_after_workflow():
+    wid = "wf_impact_test"
+    # Ensure it's a new test DB execution
+    status = _run(PRIMARY, wid)
+    assert status == "pending_approval"
+    
+    from app.impact import calculate_impact
+    impact = calculate_impact(wid)
+    assert impact["workflow_id"] == wid
+    assert impact["status"] == "pending_approval"
+    assert impact["budget"] == 10000000.0
+    assert impact["final_cost"] > 0
+    assert impact["savings"] >= 0
+    assert impact["suppliers_evaluated"] > 0
+    assert impact["duration_ms"] > 0
+    assert impact["automated_steps"] > 0
+
+def test_impact_endpoint():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    
+    wid = "wf_impact_endpoint_test"
+    _run(PRIMARY, wid)
+    
+    response = client.get(f"/api/workflows/{wid}/impact")
+    assert response.status_code == 200
+    impact = response.json()
+    assert impact["workflow_id"] == wid
+    assert impact["final_cost"] > 0

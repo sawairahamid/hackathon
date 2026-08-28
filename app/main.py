@@ -128,7 +128,20 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
         payload=json.loads(plan.model_dump_json()),
     )
 
-    task = asyncio.create_task(asyncio.to_thread(run_workflow, wid, entities, plan))
+    def _runner():
+        from app.models import Plan
+        current_plan = plan
+        while True:
+            res = run_workflow(wid, entities, current_plan)
+            if res == "REPLAN":
+                # Fetch the newly replanned version
+                row = trace.get_workflow(wid)
+                if row and row.get("plan_json"):
+                    current_plan = Plan(**json.loads(row["plan_json"]))
+                    continue
+            break
+
+    task = asyncio.create_task(asyncio.to_thread(_runner))
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
 
@@ -144,6 +157,21 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
 @app.get("/api/workflows/{wid}")
 def get_workflow(wid: str) -> dict:
     return _snapshot(wid)
+
+@app.get("/api/workflows/{wid}/incidents")
+def get_incidents(wid: str) -> dict:
+    incidents = trace.list_incidents(wid)
+    actions = trace.list_recovery_actions(wid)
+    return {"incidents": incidents, "actions": actions}
+
+from app.impact import calculate_impact
+
+@app.get("/api/workflows/{wid}/impact")
+def get_impact(wid: str) -> dict:
+    wf = trace.get_workflow(wid)
+    if not wf:
+        raise HTTPException(404, "workflow not found")
+    return calculate_impact(wid)
 
 
 @app.get("/api/workflows/{wid}/events")

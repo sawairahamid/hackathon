@@ -6,6 +6,7 @@ from typing import Any
 from app import trace
 from app.models import Entities, Plan, PlanStep, ToolResult
 from app.tools import invoke, load_all
+from app.incident.commander import handle_incident
 
 
 def _dig(obj: Any, parts: list[str]) -> Any:
@@ -187,9 +188,33 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
             )
             if result.ok:
                 break
-            if attempt < attempts:
-                trace.emit(wid, "step_retry", f"{step.tool} failed, retrying ({result.error})", step_id=step.id)
-                time.sleep(0.35 * attempt)
+            
+            # Pass to incident commander if not ok
+            action = handle_incident(wid, step.id, result, attempt, attempts)
+            
+            if action == "REPLAN":
+                # We need to break out and restart the execution loop with the new plan
+                return "REPLAN"
+            elif action == "RETRY":
+                if attempt < attempts:
+                    trace.emit(wid, "step_retry", f"{step.tool} failed, retrying ({result.error})", step_id=step.id)
+                    time.sleep(0.35 * attempt)
+            elif action == "ESCALATE":
+                break
+            elif action == "FALLBACK":
+                # Inject a hint to use fallback in inputs
+                if isinstance(inputs, dict):
+                    if "chaos" not in inputs or not isinstance(inputs.get("chaos"), dict):
+                        inputs["chaos"] = {}
+                    inputs["chaos"]["use_fallback"] = True
+                trace.emit(wid, "FALLBACK_ACTIVATED", "Falling back to bundled catalog", step_id=step.id)
+                # Try one more time with fallback
+                step_result = invoke(step.tool, inputs if isinstance(inputs, dict) else {})
+                trace.record_tool_call(wid, step.id, step.tool, inputs, step_result.model_dump(), step_result.ok, step_result.latency_ms)
+                if step_result.ok:
+                    result = step_result
+                    trace.upsert_step(wid, step.id, status="done", output=step_result.data, finished=True)
+                    break
 
         if step.tool not in tools_used:
             tools_used.append(step.tool)
@@ -208,29 +233,37 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
 
         if not result.ok or (step.tool == "validate_selection" and isinstance(data, dict) and not data.get("passed")):
             if step.tool == "validate_selection" and isinstance(data, dict) and not data.get("passed"):
+                # Use Incident Commander to see if we replan or escalate
+                v_res = ToolResult(ok=False, tool="validate_selection", error="; ".join(data.get("errors") or []), error_type="VALIDATION_FAILURE")
+                action = handle_incident(wid, step.id, v_res, 1, 1)
+                if action == "REPLAN":
+                    return "REPLAN"
+                    
                 statuses[step.id] = "failed"
                 trace.upsert_step(wid, step.id, status="failed", output=data, error="; ".join(data.get("errors") or []), finished=True)
                 trace.emit(wid, "escalated", "Validation could not be satisfied — escalating to a human", step_id=step.id, payload=data)
                 trace.set_workflow_fields(wid, status="escalated")
                 _compile_best_effort(wid, ent, outputs, tools_used, status="escalated")
                 trace.emit(wid, "workflow_completed", "Workflow escalated after validation failure")
+                from app.impact import calculate_impact
+                trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
                 return "escalated"
+                
             if step.on_fail == "skip":
                 statuses[step.id] = "skipped"
                 trace.upsert_step(wid, step.id, status="skipped", error=result.error, finished=True)
                 continue
-            if step.on_fail == "escalate":
-                statuses[step.id] = "failed"
-                trace.upsert_step(wid, step.id, status="failed", error=result.error, finished=True)
-                trace.set_workflow_fields(wid, status="escalated", error=result.error)
-                trace.emit(wid, "escalated", f"{step.name} failed: {result.error}", step_id=step.id)
-                _compile_best_effort(wid, ent, outputs, tools_used, status="escalated")
-                trace.emit(wid, "workflow_completed", "Workflow escalated")
-                return "escalated"
+            
+            # Since IncidentCommander was called during the retry loop, if we are here and not ok, it means we exhausted retries or chose escalate
             statuses[step.id] = "failed"
             trace.upsert_step(wid, step.id, status="failed", error=result.error, finished=True)
-            trace.emit(wid, "step_failed", f"{step.name} failed: {result.error}", step_id=step.id)
-            return fail_workflow(result.error or f"{step.tool} failed")
+            trace.set_workflow_fields(wid, status="escalated", error=result.error)
+            trace.emit(wid, "escalated", f"{step.name} failed: {result.error}", step_id=step.id)
+            _compile_best_effort(wid, ent, outputs, tools_used, status="escalated")
+            trace.emit(wid, "workflow_completed", "Workflow escalated")
+            from app.impact import calculate_impact
+            trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
+            return "escalated"
 
         statuses[step.id] = "done"
         trace.upsert_step(wid, step.id, status="done", output=data, finished=True)
@@ -248,6 +281,8 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
         trace.set_workflow_fields(wid, status="pending_approval")
     trace.emit(wid, "approval_requested", "Waiting for human approval — agent will not auto-approve spend")
     trace.emit(wid, "workflow_completed", "Execution finished; approval gate is open")
+    from app.impact import calculate_impact
+    trace.emit(wid, "impact_ready", "Impact analytics ready", payload=calculate_impact(wid))
     return "pending_approval"
 
 

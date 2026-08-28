@@ -6,6 +6,7 @@ from typing import Any
 
 from app.models import Entities, ToolResult
 from app.tools import tool
+from app.policies import default_policy_engine
 
 REQUIRED = ("id", "name", "unit_price", "total")
 
@@ -46,10 +47,21 @@ def validate(
         }
 
     total = float(selected.get("total") or 0)
+    # Check default policy budget as well as intent budget
+    policy_ok, policy_msg = default_policy_engine.evaluate_budget(ent.currency, total)
+    local_ok = total <= float(ent.budget) + 1e-6
     add(
         "budget_compliance",
-        total <= float(ent.budget) + 1e-6,
-        f"{total:,.0f} <= {ent.budget:,.0f} {ent.currency}",
+        policy_ok and local_ok,
+        f"{total:,.0f} <= {ent.budget:,.0f} {ent.currency}. Policy: {policy_msg}",
+    )
+    
+    # Check supplier policy
+    sup_ok, sup_msg = default_policy_engine.evaluate_supplier(selected)
+    add(
+        "business_policy_compliance",
+        sup_ok,
+        sup_msg,
     )
 
     qty_sel = int(selected.get("quantity") or ent.quantity)

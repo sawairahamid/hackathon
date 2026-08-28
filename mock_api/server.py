@@ -73,8 +73,17 @@ def quotes(
         if n == 0:
             return JSONResponse({"unexpected": True, "payload": "<<<not-json-quotes>>>"}, status_code=200)
 
+    if fail == "multi_failure":
+        n = _fail_once.get(token, 0)
+        _fail_once[token] = n + 1
+        if n == 0:
+            time.sleep(1.4)
+            return JSONResponse({"ok": False, "error": "vendor gateway timeout (multi 1)"}, status_code=503)
+        if n == 1:
+            return JSONResponse({"unexpected": True, "payload": "<<<not-json-quotes>>> (multi 2)"}, status_code=200)
+
     rows = []
-    for raw in _catalog_for(item)[: max(limit, 3)]:
+    for i, raw in enumerate(_catalog_for(item)[: max(limit, 3)]):
         rec = dict(raw)
         rec["quantity"] = quantity
         rec["total"] = rec["unit_price"] * quantity
@@ -82,6 +91,11 @@ def quotes(
             rec["unit_price"] = rec["unit_price"] * 5
             rec["total"] = rec["unit_price"] * quantity
             rec["notes"] = (rec.get("notes") or "") + " [CHAOS] prices inflated 5x"
+        if fail == "price_shock" and i % 2 == 0:
+            # Inject a price shock on every other item to violate budget/policies for some but not all
+            rec["unit_price"] = rec["unit_price"] * 3
+            rec["total"] = rec["unit_price"] * quantity
+            rec["notes"] = (rec.get("notes") or "") + " [CHAOS] price shock applied"
         rows.append(rec)
 
     return {"ok": True, "item": item, "quantity": quantity, "latency_ms": latency, "quotes": rows}

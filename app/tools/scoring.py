@@ -6,6 +6,7 @@ from typing import Any
 
 from app.models import ToolResult
 from app.tools import tool
+from app.policies import default_policy_engine
 
 DEFAULT_WEIGHTS = {"price": 0.5, "delivery": 0.3, "warranty": 0.2}
 
@@ -30,7 +31,15 @@ def rank(
     for q in quotes:
         rec = dict(q)
         rec["total"] = rec.get("total") or rec.get("unit_price", 0) * quantity
-        rec["meets_budget"] = rec["total"] <= budget
+        
+        pol_budget_ok, pol_budget_msg = default_policy_engine.evaluate_budget(currency, rec["total"])
+        local_budget_ok = rec["total"] <= budget
+        rec["meets_budget"] = pol_budget_ok and local_budget_ok
+        
+        pol_sup_ok, pol_sup_msg = default_policy_engine.evaluate_supplier(rec)
+        rec["meets_policy"] = pol_sup_ok
+        rec["policy_reason"] = pol_sup_msg
+        
         if rec["id"] in exclude:
             rec["excluded"] = True
         usable.append(rec)
@@ -58,15 +67,27 @@ def rank(
             "weighted": round(weighted, 1),
         }
         if q.get("excluded"):
-            rejected.append({"id": q["id"], "name": q.get("name"), "reason": "Excluded after validation self-correct", "total": q["total"]})
+            rejected.append({"id": q["id"], "name": q.get("name"), "reason": "Excluded after validation self-correct", "total": q["total"], "scores": q["scores"]})
             continue
         if not q["meets_budget"]:
             rejected.append(
                 {
                     "id": q["id"],
                     "name": q.get("name"),
-                    "reason": f"Total {_money(q['total'], currency)} exceeds budget {_money(budget, currency)}",
+                    "reason": f"Total {_money(q['total'], currency)} exceeds budget {_money(budget, currency)} or policy maximum",
                     "total": q["total"],
+                    "scores": q["scores"]
+                }
+            )
+            continue
+        if not q.get("meets_policy", True):
+            rejected.append(
+                {
+                    "id": q["id"],
+                    "name": q.get("name"),
+                    "reason": q.get("policy_reason", "Failed business policy"),
+                    "total": q["total"],
+                    "scores": q["scores"]
                 }
             )
             continue
