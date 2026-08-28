@@ -4,7 +4,7 @@ Round 2 is 40% value proposition, 40% market viability, 20% delivery. Say this, 
 
 ## 1. The problem (30s)
 
-Enterprises do not have a chatbot problem. They have a *hand-off* problem. A purchase request today is a Slack message, a spreadsheet of vendor quotes, a Word PO, and an email to a manager — four tools, one tired human stitching them together. Every delayed approval is cash sitting still; every unlogged decision is an audit finding.
+Enterprises do not have a chatbot problem. They have a *hand-off* problem. A purchase request today is a chat message, a spreadsheet of vendor quotes, a Word PO, and an email to a manager — four tools, one tired human stitching them together. Every delayed approval is cash sitting still; every unlogged decision is an audit finding.
 
 ## 2. What we built (45s)
 
@@ -31,7 +31,7 @@ Pakistan / GCC specific: PKR-native documents, bilingual later, on-prem or VPC b
 ## 5. Traction path (30s)
 
 - Week 0: this prototype, two workflows, full audit log.
-- 90 days: plug into one real vendor list + one real approver inbox (email/Slack) at a design-partner firm.
+- 90 days: plug into one real vendor list + one real approver inbox (email) at a design-partner firm.
 - 12 months: workflow library sold as seats to procurement ops, not as “an LLM app.”
 
 ## 6. The ask (15s)

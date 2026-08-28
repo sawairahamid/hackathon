@@ -1,4 +1,4 @@
-docker --version# OrchestrAI — Deployment Guide
+# OrchestrAI — Deployment Guide
 
 ## Architecture overview
 
@@ -9,31 +9,18 @@ docker --version# OrchestrAI — Deployment Guide
 | Mock vendor API | 8001 | Simulated HTTP supplier quotes |
 | OrchestrAI main | 8000 | Parser → planner → executor, trace UI |
 
-The Docker image runs `start.py` so both services share one container.
-
 ---
 
-## Option A — Docker (local or any VPS)
+## Option A — Local / VPS (Python)
 
 ```bash
-docker build -t orchestrai .
-docker run -p 8000:8000 \
-  -e GEMINI_API_KEY=your_key \
-  -e GROQ_API_KEY=your_key \
-  -e SLACK_WEBHOOK_URL=https://hooks.slack.com/... \
-  orchestrai
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python start.py
 ```
 
 Open http://localhost:8000.
-
-To persist the SQLite database across container restarts:
-
-```bash
-docker run -p 8000:8000 \
-  -v $(pwd)/data:/app/data \
-  -e GEMINI_API_KEY=your_key \
-  orchestrai
-```
 
 ---
 
@@ -45,7 +32,6 @@ docker run -p 8000:8000 \
 4. Set the secret env vars in the Render dashboard:
    - `GEMINI_API_KEY` (optional — falls back to Groq then templates)
    - `GROQ_API_KEY` (optional)
-   - `SLACK_WEBHOOK_URL` (optional)
 5. Click **Deploy**.
 
 > [!WARNING]
@@ -65,10 +51,9 @@ docker run -p 8000:8000 \
 | `GROQ_API_KEY` | No | — | Free at console.groq.com |
 | `GROQ_MODEL` | No | `llama-3.3-70b-versatile` | |
 | `SUPPLIER_API_URL` | No | `http://127.0.0.1:8001` | Points to the mock vendor API |
-| `HOST` | No | `127.0.0.1` | Use `0.0.0.0` in Docker |
+| `HOST` | No | `127.0.0.1` | |
 | `PORT` | No | `8000` | |
 | `DATABASE_PATH` | No | `data/orchestrai.db` | Relative to repo root |
-| `SLACK_WEBHOOK_URL` | No | — | Slack -> Apps -> Incoming Webhooks. No-op if unset. |
 
 ---
 

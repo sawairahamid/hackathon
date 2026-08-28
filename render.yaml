@@ -8,11 +8,12 @@
 services:
   - type: web
     name: orchestrai
-    runtime: docker
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python start.py"
     plan: free        # upgrade to 'starter' for a persistent disk
     region: oregon
     branch: main
-    dockerfilePath: ./Dockerfile
     envVars:
       - key: HOST
         value: "0.0.0.0"
@@ -25,8 +26,6 @@ services:
       - key: GEMINI_API_KEY
         sync: false          # set in Render dashboard
       - key: GROQ_API_KEY
-        sync: false
-      - key: SLACK_WEBHOOK_URL
         sync: false
     healthCheckPath: /api/health
     # Uncomment to add a persistent disk (prevents DB loss on redeploy):

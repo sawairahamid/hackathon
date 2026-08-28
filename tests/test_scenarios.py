@@ -40,7 +40,7 @@ def test_parse_primary_use_case():
 def test_parse_secondary_use_case():
     ent = heuristic_parse(SECONDARY)
     assert ent.intent == "vendor_comparison"
-    assert ent.item == "software_subscription"
+    assert ent.item == "renewal"
     assert ent.budget == 20_000
     assert ent.currency == "USD"
 

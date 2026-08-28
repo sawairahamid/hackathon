@@ -7,7 +7,6 @@ Instead it:
      the two new intents and store them in entities.extra["intent_detail"].
   3. Monkey-patches app.planner.template_plan / plan_workflow to route new
      intents to domain-specific step sequences.
-  4. Patches submit_for_approval to fire send_notification after each approval.
 
 All patches are idempotent: re-importing or reloading this module is safe.
 """
@@ -22,7 +21,6 @@ log = logging.getLogger(__name__)
 # ── Register new tools ────────────────────────────────────────────────────────
 from app.tools import reimbursement as _reimb   # noqa: F401 — triggers @tool
 from app.tools import onboarding as _onb        # noqa: F401 — triggers @tool
-from app.tools import notify as _notify         # noqa: F401 — triggers @tool
 
 # ── Grab originals once (before any patching) ─────────────────────────────────
 import app.parser as _parser
@@ -168,7 +166,7 @@ if not getattr(_planner.template_plan, _PLANNER_PATCHED, False):
             steps=[
                 PlanStep(
                     id="s1", name="Provision system accounts", tool="provision_accounts",
-                    description="Create email, Slack, Jira, GitHub, and VPN accounts for the new hire.",
+                    description="Create email, Jira, GitHub, and VPN accounts for the new hire.",
                     inputs={
                         "employee_name": "$entities.extra.employee_name",
                         "start_date": "$entities.extra.start_date",
@@ -241,43 +239,4 @@ import app.main as _main_mod
 _main_mod.plan_workflow = _planner.plan_workflow
 _main_mod.parse_request = _parser.parse_request
 
-# ── Patch submit_for_approval to fire send_notification ──────────────────────
-from app.tools import _REGISTRY  # noqa: E402
-
-_orig_submit_fn = _REGISTRY.get("submit_for_approval", {}).get("fn")
-
-if _orig_submit_fn is not None and not getattr(_orig_submit_fn, "_notify_patched", False):
-    def _submit_with_notify(
-        workflow_id: str,
-        summary: str,
-        approver: str = "procurement_manager",
-        artifact_url: str | None = None,
-        po_number: str | None = None,
-    ) -> Any:
-        result = _orig_submit_fn(
-            workflow_id=workflow_id,
-            summary=summary,
-            approver=approver,
-            artifact_url=artifact_url,
-            po_number=po_number,
-        )
-        try:
-            msg = f"Approval requested for workflow `{workflow_id}`"
-            if po_number:
-                msg += f" \u2014 {po_number}"
-            if summary:
-                msg += f"\n{str(summary)[:200]}"
-            _REGISTRY["send_notification"]["fn"](
-                message=msg,
-                workflow_id=workflow_id,
-                artifact_url=artifact_url or "",
-            )
-        except Exception as exc:  # noqa: BLE001
-            log.warning("[domain_ext] send_notification error: %s", exc)
-        return result
-
-    setattr(_submit_with_notify, "_notify_patched", True)
-    _REGISTRY["submit_for_approval"]["fn"] = _submit_with_notify
-    log.info("[domain_ext] submit_for_approval patched with Slack notification hook")
-
-log.info("[domain_ext] Domain extension loaded: reimbursement, onboarding, notify")
+log.info("[domain_ext] Domain extension loaded: reimbursement, onboarding")

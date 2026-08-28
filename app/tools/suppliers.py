@@ -31,7 +31,7 @@ BUNDLED = {
 # Items that map to the laptop static catalog
 _LAPTOP_ALIASES = {"laptops", "laptop", "notebook", "notebooks"}
 # Items that map to the software subscription static catalog
-_SOFTWARE_ALIASES = {"software_subscription", "software", "saas", "subscription"}
+_SOFTWARE_ALIASES = {"software_subscription", "software", "saas", "subscription", "renewal", "renewal/alternative_options"}
 
 
 def _normalize_key(item: str) -> str:

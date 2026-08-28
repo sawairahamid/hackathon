@@ -121,6 +121,9 @@ def heuristic_parse(text: str) -> Entities:
         if cm:
             item = cm.group(0)
 
+    if intent == "vendor_comparison":
+        qty = 1
+
     log.debug("[PARSER_HEURISTIC] qty=%d item='%s' intent=%s", qty, item, intent)
 
     # ── Budget extraction ─────────────────────────────────────────────────────

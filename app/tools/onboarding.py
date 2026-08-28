@@ -13,7 +13,7 @@ from app.tools import tool
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "generated"
 
-_DEFAULT_ACCOUNTS = ["email", "slack", "jira", "github", "vpn"]
+_DEFAULT_ACCOUNTS = ["email", "jira", "github", "vpn"]
 _DEFAULT_EQUIPMENT = ["laptop", "mouse", "keyboard", "monitor", "headset"]
 
 
@@ -29,7 +29,7 @@ def _latin(s: object) -> str:
 
 @tool(
     name="provision_accounts",
-    description="Mock tool: 'creates' system accounts for a new hire (email, Slack, Jira, GitHub, VPN). Logs each account provisioned. Deterministic — no real API calls.",
+    description="Mock tool: 'creates' system accounts for a new hire (email, Jira, GitHub, VPN). Logs each account provisioned. Deterministic — no real API calls.",
 )
 def provision_accounts(
     employee_name: str | None = None,
