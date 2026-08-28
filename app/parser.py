@@ -10,7 +10,7 @@ from app.models import Entities
 PARSER_PROMPT = """You extract structured procurement entities from a business request.
 Return JSON with keys:
   intent: "procurement" | "vendor_comparison" | "other"
-  item: short catalog name (use "laptops" or "software_subscription" when those fit)
+  item: short catalog name (extract exactly what the user requested, e.g., "desktop computers")
   quantity: integer
   budget: number (the ceiling, expanded — "10 million" = 10000000)
   currency: "PKR" or "USD"
@@ -39,21 +39,23 @@ def heuristic_parse(text: str) -> Entities:
     lower = raw.lower()
 
     intent: str = "procurement"
-    item = "item"
     if any(w in lower for w in ("renew", "vendor", "software", "license", "saas", "subscription", "contract")):
         intent = "vendor_comparison"
-        item = "software_subscription"
-    if any(w in lower for w in ("laptop", "notebook")):
-        item = "laptops"
-        if intent == "vendor_comparison" and "laptop" in lower:
-            intent = "procurement"
 
     qty = 1
-    m = re.search(r"(\d+)\s*(?:x\s*)?(laptops?|units?|seats?|licenses?|notebooks?)", lower)
+    item = "item"
+    m = re.search(r"(\d+)\s*(?:x\s*)?([a-zA-Z0-9\s-]+)?", lower)
     if m:
         qty = int(m.group(1))
-    elif intent == "vendor_comparison":
-        qty = 1
+        if m.group(2):
+            words = m.group(2).strip().split()
+            clean = []
+            for w in words:
+                if w in ("with", "for", "under", "budget", "pkr", "usd", "rs", "ceiling", "at", "max", "maximum", "compare", "get"):
+                    break
+                clean.append(w)
+            if clean:
+                item = " ".join(clean)
 
     budget = 0.0
     currency = "PKR"

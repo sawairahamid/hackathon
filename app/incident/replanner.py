@@ -7,7 +7,7 @@ from app import trace
 from app.models import Plan
 
 
-def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, outputs: dict) -> Plan:
+def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str) -> Plan:
     """
     Mutates the current workflow plan to insert recovery steps.
     Returns the new Plan object.
@@ -32,6 +32,14 @@ def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, o
         # Usually s3 is validate_selection.
         
         # We will add new steps for re-ranking and re-validating
+        steps_db = trace.list_steps(wid)
+        failed_out = {}
+        for s in steps_db:
+            if s.get("step_id") == step_id:
+                failed_out = s.get("output") or {}
+                break
+        exclude_ids = failed_out.get("suggested_exclude_ids") or []
+
         s2_replan = {
             "id": f"s2_v{new_version}",
             "name": f"Re-rank suppliers (v{new_version})",
@@ -42,7 +50,7 @@ def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, o
                 "budget": "$entities.budget",
                 "currency": "$entities.currency",
                 "quantity": "$entities.quantity",
-                "exclude_ids": "$s3.output.suggested_exclude_ids"
+                "exclude_ids": exclude_ids
             },
             "depends_on": [],
             "condition": {"type": "always"},
@@ -106,7 +114,7 @@ def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, o
                 idx = i
                 break
                 
-        new_steps = plan.steps[:idx+1]
+        new_steps = plan.steps[:idx]
         
         from app.models import PlanStep
         new_steps.append(PlanStep(**s2_replan))

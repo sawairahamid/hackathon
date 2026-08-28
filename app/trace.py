@@ -361,7 +361,7 @@ def record_incident(
 ) -> None:
     with cursor() as cur:
         cur.execute(
-            """INSERT INTO incidents (id, workflow_id, step_id, type, severity, message, affected_steps_json, created_at)
+            """INSERT OR REPLACE INTO incidents (id, workflow_id, step_id, type, severity, message, affected_steps_json, created_at)
                VALUES (?,?,?,?,?,?,?,?)""",
             (iid, wid, step_id, itype, severity, message, json.dumps(affected_steps), utcnow())
         )

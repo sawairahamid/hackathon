@@ -74,6 +74,15 @@ def validate(
         f"qty {qty_sel} vs requested {ent.quantity}; total {total:,.0f} vs unit×qty {expected_total:,.0f}",
     )
 
+    item_sel = str(selected.get("item") or "").lower()
+    item_req = str(ent.item).lower()
+    item_ok = item_sel == item_req or (item_sel and item_sel in item_req) or (item_req and item_req in item_sel)
+    add(
+        "item_correctness",
+        item_ok,
+        f"selected item '{item_sel}' vs requested '{item_req}'",
+    )
+
     quote_ids = {q.get("id") for q in quotes}
     ranked_ids = {r.get("id") for r in ranked}
     sid = selected.get("id")

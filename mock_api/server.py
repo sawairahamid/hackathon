@@ -27,18 +27,17 @@ CATALOGS = {
 }
 
 
-def _catalog_for(item: str, budget: float | None = None) -> list[dict]:
+def _catalog_for(item: str, budget: float | None = None, quantity: int = 1) -> list[dict]:
     key = (item or "").strip().lower().replace(" ", "_")
     if key in CATALOGS:
         return CATALOGS[key]
-    if any(w in key for w in ("laptop", "notebook")):
-        return CATALOGS["laptops"]
     
     # Generate dynamic catalog on the fly
     import random
     out = []
-    base_price = (budget / 1) * 0.9 if budget else 100000.0
-    for i, name in enumerate(["Global Supplies", "Tech Distributors", "Mega Distributors"]):
+    base_price = (budget / quantity) * 0.9 if budget else 100000.0
+    names = [f"Global {str(item).title()} Supplies", f"Tech {str(item).title()} Distributors", f"Mega {str(item).title()}"]
+    for i, name in enumerate(names):
         unit_price = base_price * random.uniform(0.8, 1.1)
         rec = {
             "id": f"mock_{i}",
@@ -73,6 +72,7 @@ def quotes(
     limit: int = Query(4, ge=1, le=12),
     fail: str | None = Query(None),
     extra_latency_ms: int = Query(0, ge=0, le=5000),
+    budget: float | None = Query(None),
 ):
     token = f"{item}:{fail}"
     latency = random.randint(80, 220) + extra_latency_ms
@@ -101,7 +101,7 @@ def quotes(
             return JSONResponse({"unexpected": True, "payload": "<<<not-json-quotes>>> (multi 2)"}, status_code=200)
 
     rows = []
-    for i, raw in enumerate(_catalog_for(item)[: max(limit, 3)]):
+    for i, raw in enumerate(_catalog_for(item, budget=budget, quantity=quantity)[: max(limit, 3)]):
         rec = dict(raw)
         rec["quantity"] = quantity
         rec["total"] = rec["unit_price"] * quantity

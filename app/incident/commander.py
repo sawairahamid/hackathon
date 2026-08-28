@@ -14,9 +14,9 @@ def handle_incident(wid: str, step_id: str, result: ToolResult, attempt: int, ma
     Classifies a failure and selects a recovery action.
     Returns a string instruction: "RETRY", "ESCALATE", "SKIP", "REPLAN", "CONTINUE", or None.
     """
-    iid = "inc_" + uuid.uuid4().hex[:12]
     error = result.error or "Unknown failure"
     error_type = result.error_type or _classify_error(error)
+    iid = f"inc_{wid}_{step_id}_{error_type}"
     severity = _determine_severity(error_type)
     
     trace.emit(wid, "INCIDENT_DETECTED", f"Incident detected: {error_type}", step_id=step_id, payload={"incident_id": iid, "severity": severity, "message": error})

@@ -16,7 +16,7 @@ def determine_recovery(error_type: str, severity: str, attempt: int, max_retries
 
     if error_type in ("BUDGET_VIOLATION", "VALIDATION_FAILURE"):
         # For validation failures, we should REPLAN if possible
-        if step_id == "s3":  # validation step
+        if step_id.startswith("s3"):  # validation step
             return "REPLAN", f"{error_type} detected at validation; replanning workflow"
         return "ESCALATE", f"Cannot recover from {error_type} at this stage"
 

@@ -20,12 +20,7 @@ BUNDLED = {
 
 
 def _normalize_item(item: str) -> str:
-    key = (item or "").strip().lower()
-    if any(w in key for w in ("software", "vendor", "license", "saas", "renewal", "subscription")):
-        return "software_subscription"
-    if any(w in key for w in ("laptop", "notebook")):
-        return "laptops"
-    return key.replace(" ", "_")
+    return (item or "").strip().lower().replace(" ", "_")
 
 
 def _local_quotes(item: str, quantity: int, budget: float | None = None) -> list[dict[str, Any]]:
@@ -45,7 +40,8 @@ def _local_quotes(item: str, quantity: int, budget: float | None = None) -> list
     import random
     out = []
     base_price = (budget / quantity) * 0.9 if budget else 100000.0
-    for i, name in enumerate(["Global Supplies", "Tech Distributors", "Mega Distributors"]):
+    names = [f"Global {str(item).title()} Supplies", f"Tech {str(item).title()} Distributors", f"Mega {str(item).title()}"]
+    for i, name in enumerate(names):
         unit_price = base_price * random.uniform(0.8, 1.1)
         rec = {
             "id": f"mock_{i}",
@@ -107,6 +103,8 @@ def fetch_suppliers(
         "limit": max(int(limit or 3), 3),
         "extra_latency_ms": extra,
     }
+    if budget is not None:
+        params["budget"] = budget
     if fail:
         params["fail"] = fail
 
@@ -147,7 +145,7 @@ def fetch_suppliers(
             last_err = str(exc)
             continue
 
-    quotes = _local_quotes(item_key, quantity)
+    quotes = _local_quotes(item_key, quantity, budget=budget)
     if budget is not None:
         for q in quotes:
             q["meets_budget"] = q["total"] <= budget

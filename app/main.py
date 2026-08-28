@@ -131,9 +131,18 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
     def _runner():
         from app.models import Plan
         current_plan = plan
+        workflow_retries = 0
+        MAX_WORKFLOW_RETRIES = 2
         while True:
             res = run_workflow(wid, entities, current_plan)
             if res == "REPLAN":
+                workflow_retries += 1
+                if workflow_retries > MAX_WORKFLOW_RETRIES:
+                    msg = f"Workflow {wid}: Retry limit reached. Stopping workflow."
+                    trace.emit(wid, "workflow_failed", msg)
+                    trace.set_workflow_fields(wid, status="failed", error="MAX_WORKFLOW_RETRIES exceeded")
+                    break
+                trace.emit(wid, "log", f"Workflow {wid}: Recovery attempt {workflow_retries}/{MAX_WORKFLOW_RETRIES}")
                 # Fetch the newly replanned version
                 row = trace.get_workflow(wid)
                 if row and row.get("plan_json"):
