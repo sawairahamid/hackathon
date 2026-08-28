@@ -34,6 +34,8 @@ Natural language request
   Stakeholder completion report + full audit log
 ```
 
+![Architecture Pipeline](docs/architecture.svg)
+
 **The LLM never does arithmetic.** It parses language, drafts a plan, and writes prose. Budget checks, totals, scoring, and ranking are deterministic Python.
 
 ## 1. Entities (parser output)
