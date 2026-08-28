@@ -100,10 +100,25 @@ def heuristic_parse(text: str) -> Entities:
             item = " ".join(clean).strip().rstrip(".,;:")
     else:
         # Fallback: find first standalone integer and grab following words
-        m2 = re.search(r"\b(\d+)\s+([a-zA-Z][a-zA-Z0-9\s\-]+)", lower)
-        if m2:
-            qty = int(m2.group(1))
-            raw_item = m2.group(2).strip()
+        for match in re.finditer(r"\b(\d+)\s+([a-zA-Z][a-zA-Z0-9\s\-]+)", lower):
+            start = match.start()
+            prefix = lower[:start].strip()
+            # If the number is preceded by 'compare', it is n_sup, not qty.
+            if prefix.endswith("compare") or prefix.endswith("compare at least"):
+                raw_item = match.group(2).strip()
+                if not item:
+                    words = raw_item.split()
+                    clean = []
+                    for w in words:
+                        if w.rstrip(".,;:") in _stop:
+                            break
+                        clean.append(w)
+                    if clean:
+                        item = " ".join(clean).strip().rstrip(".,;:")
+                break
+
+            qty = int(match.group(1))
+            raw_item = match.group(2).strip()
             words = raw_item.split()
             clean = []
             for w in words:
@@ -112,6 +127,7 @@ def heuristic_parse(text: str) -> Entities:
                 clean.append(w)
             if clean:
                 item = " ".join(clean).strip().rstrip(".,;:")
+            break
 
     # Preserve original casing for item by re-extracting from original text
     if item:
@@ -120,9 +136,6 @@ def heuristic_parse(text: str) -> Entities:
         cm = pattern.search(raw)
         if cm:
             item = cm.group(0)
-
-    if intent == "vendor_comparison":
-        qty = 1
 
     log.debug("[PARSER_HEURISTIC] qty=%d item='%s' intent=%s", qty, item, intent)
 
