@@ -148,10 +148,11 @@ async def create_workflow(body: CreateWorkflowRequest) -> dict:
     def _runner():
         from app.models import Plan
         current_plan = plan
+        replans = 0
         while True:
             res = run_workflow(wid, entities, current_plan)
-            if res == "REPLAN":
-                # Fetch the newly replanned version
+            if res == "REPLAN" and replans < 2:
+                replans += 1
                 row = trace.get_workflow(wid)
                 if row and row.get("plan_json"):
                     current_plan = Plan(**json.loads(row["plan_json"]))

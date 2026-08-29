@@ -61,6 +61,15 @@ def _truthy_nonempty(val: Any) -> bool:
     return True
 
 
+def _skip_remaining(wid: str, plan: Plan, statuses: dict[str, str], *, except_id: str | None = None) -> None:
+    for step in plan.steps:
+        if step.id == except_id:
+            continue
+        if statuses.get(step.id) in ("pending", "in_progress"):
+            statuses[step.id] = "skipped"
+            trace.upsert_step(wid, step.id, status="skipped", finished=True)
+
+
 def condition_holds(step: PlanStep, statuses: dict[str, str], outputs: dict[str, Any]) -> bool:
     cond = step.condition
     if not cond or cond.type in ("always", None, ""):
@@ -140,6 +149,7 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
     trace.set_workflow_fields(wid, status="running")
 
     def fail_workflow(msg: str) -> str:
+        _skip_remaining(wid, plan, statuses)
         trace.set_workflow_fields(wid, status="failed", error=msg)
         trace.emit(wid, "workflow_failed", msg)
         return "failed"
@@ -195,7 +205,7 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
                 f"{step.tool} {'ok' if result.ok else 'error'} in {result.latency_ms} ms"
                 + (f" · {result.error}" if result.error else ""),
                 step_id=step.id,
-                payload={"ok": result.ok, "source": result.source, "error": result.error},
+                payload=_tool_summary(step.tool, result),
             )
             if result.ok:
                 break
@@ -230,7 +240,7 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
         if step.tool not in tools_used:
             tools_used.append(step.tool)
 
-        data = result.data if result.ok else None
+        data = result.data if isinstance(result.data, dict) else (result.data if result.ok else None)
         if isinstance(data, dict):
             outputs[step.id] = data
         elif result.ok:
@@ -252,6 +262,7 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
                     
                 statuses[step.id] = "failed"
                 trace.upsert_step(wid, step.id, status="failed", output=data, error="; ".join(data.get("errors") or []), finished=True)
+                _skip_remaining(wid, plan, statuses, except_id=step.id)
                 trace.emit(wid, "escalated", "Validation could not be satisfied — escalating to a human", step_id=step.id, payload=data)
                 trace.set_workflow_fields(wid, status="escalated")
                 _compile_best_effort(wid, ent, outputs, tools_used, status="escalated")
@@ -267,7 +278,15 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
             
             # Since IncidentCommander was called during the retry loop, if we are here and not ok, it means we exhausted retries or chose escalate
             statuses[step.id] = "failed"
-            trace.upsert_step(wid, step.id, status="failed", error=result.error, finished=True)
+            trace.upsert_step(
+                wid,
+                step.id,
+                status="failed",
+                error=result.error,
+                output=data if isinstance(data, dict) else None,
+                finished=True,
+            )
+            _skip_remaining(wid, plan, statuses, except_id=step.id)
             trace.set_workflow_fields(wid, status="escalated", error=result.error)
             trace.emit(wid, "escalated", f"{step.name} failed: {result.error}", step_id=step.id)
             _compile_best_effort(wid, ent, outputs, tools_used, status="escalated")
@@ -281,9 +300,13 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
         time.sleep(0.12)
 
     report = None
-    s6 = outputs.get("s6")
-    if isinstance(s6, dict):
-        report = s6.get("report")
+    for step in plan.steps:
+        if step.tool != "compile_report":
+            continue
+        blob = outputs.get(step.id)
+        if isinstance(blob, dict) and blob.get("report"):
+            report = blob["report"]
+            break
     if report:
         trace.set_workflow_fields(wid, report=report, status="pending_approval")
         trace.emit(wid, "report_ready", "Stakeholder report ready", payload={"chars": len(report)})
@@ -293,6 +316,38 @@ def run_workflow(wid: str, entities: Entities, plan: Plan) -> str:
     trace.emit(wid, "workflow_completed", "Execution finished; approval gate is open")
     _emit_impact(wid)
     return "pending_approval"
+
+
+def _tool_summary(tool: str, result: ToolResult) -> dict[str, Any]:
+    data = result.data if isinstance(result.data, dict) else {}
+    out: dict[str, Any] = {
+        "ok": result.ok,
+        "source": result.source,
+        "error": result.error,
+        "latency_ms": result.latency_ms,
+    }
+    if tool == "fetch_suppliers":
+        quotes = data.get("quotes") or []
+        out["quote_count"] = len(quotes)
+        out["names"] = [q.get("name") or q.get("id") for q in quotes]
+        if data.get("attempt"):
+            out["attempt"] = data["attempt"]
+        if data.get("fallback_reason"):
+            out["fallback_reason"] = data["fallback_reason"]
+    elif tool == "rank_suppliers":
+        sel = data.get("selected") or {}
+        out["selected"] = sel.get("name")
+        out["ranked"] = len(data.get("ranked") or [])
+        out["rejected"] = len(data.get("rejected") or [])
+        out["justification"] = (data.get("justification") or "")[:280]
+    elif tool == "validate_selection":
+        out["passed"] = data.get("passed")
+        out["checks"] = data.get("checks")
+    elif tool == "generate_purchase_order":
+        out["po_number"] = data.get("po_number")
+        out["url"] = data.get("url")
+        out["grand_total"] = data.get("grand_total")
+    return out
 
 
 def _compile_best_effort(wid: str, ent: dict, outputs: dict, tools_used: list[str], status: str) -> None:
@@ -322,7 +377,7 @@ def _safe(obj: Any, depth: int = 0) -> Any:
             return {k: _safe(obj[k], depth + 1) for k in list(obj)[:12]}
         return {k: _safe(v, depth + 1) for k, v in obj.items()}
     if isinstance(obj, list):
-        return [_safe(x, depth + 1) for x in obj[:8]]
+        return [_safe(x, depth + 1) for x in obj[:20]]
     if isinstance(obj, (str, int, float, bool)) or obj is None:
         if isinstance(obj, str) and len(obj) > 400:
             return obj[:400] + "…"

@@ -93,6 +93,26 @@ def fetch_suppliers(
     url = os.getenv("SUPPLIER_API_URL", "http://127.0.0.1:8001").rstrip("/")
     fail = _chaos_fail(chaos)
     n = _quote_limit(limit)
+    use_fallback = isinstance(chaos, dict) and chaos.get("use_fallback")
+    if use_fallback:
+        quotes = _local_quotes(item_key, quantity, n)
+        if budget is not None:
+            for q in quotes:
+                q["meets_budget"] = q["total"] <= budget
+        return ToolResult(
+            ok=True,
+            tool="fetch_suppliers",
+            data={
+                "item": item_key,
+                "quantity": quantity,
+                "currency": currency,
+                "quotes": quotes,
+                "limit": n,
+                "available": len(quotes),
+                "fallback_reason": "incident commander requested bundled catalog",
+            },
+            source="fallback",
+        )
     extra = 0
     if isinstance(chaos, dict):
         extra = int(chaos.get("extra_latency_ms") or 0)

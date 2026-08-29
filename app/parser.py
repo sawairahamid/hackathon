@@ -11,10 +11,10 @@ PARSER_PROMPT = """You extract structured procurement entities from a business r
 Return JSON with keys:
   intent: "procurement" | "vendor_comparison" | "other"
   item: short catalog name (use "laptops" or "software_subscription" when those fit)
-  quantity: integer (units to buy — not the number of suppliers to list)
-  budget: number (the ceiling, expanded — "10 million" = 10000000)
+  quantity: integer (units to buy — NOT the number of suppliers). "Show me 5 laptops" = quantity 5. "50 laptops" = 50.
+  budget: number (the ceiling, expanded — "10 million" = 10000000, "12M" = 12000000)
   currency: "PKR" or "USD"
-  suppliers_to_compare: integer. Use the number the user asked to show/find/list/compare. "Show me 10 suppliers" = 10. "Show me 10 laptops" = 10 unique quotes. Default 3 ONLY if they did not specify a count. Never clamp a specified count down to 3.
+  suppliers_to_compare: integer. Number of suppliers/vendors to retrieve. "Compare 5 suppliers" / "Show me 10 suppliers" / "Get me 6 vendors" = that number. "Show me 5 laptops" does NOT set this. Default 3 ONLY if they did not specify a supplier/vendor count. Never clamp a specified count down to 3.
   approval_target: string (default "procurement_manager")
   constraints: string array
 Do not invent a budget of 0. If a million/lakh/thousand suffix is present, expand it.
@@ -52,13 +52,12 @@ def _to_count(raw: str) -> int:
 
 
 def _requested_result_count(lower: str) -> int | None:
-    """How many unique supplier/product cards the user asked to see, if any."""
+    """How many unique suppliers to retrieve. Default is applied by the caller, not here."""
     patterns = (
         rf"compare\s+({_NUM})",
-        rf"(?:from|among)\s+({_NUM})\s+suppliers?",
-        rf"(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get)\s+({_NUM})\s+(?:[\w'-]+\s+){{0,4}}suppliers?",
-        rf"({_NUM})\s+suppliers?",
-        rf"(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get)\s+({_NUM})\s+(?:laptops?|notebooks?|quotes?|options?|vendors?)",
+        rf"(?:from|among)\s+({_NUM})\s+(?:suppliers?|vendors?)",
+        rf"(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get(?:\s+me)?)\s+({_NUM})\s+(?:[\w'-]+\s+){{0,4}}(?:suppliers?|vendors?)",
+        rf"({_NUM})\s+(?:suppliers?|vendors?)",
     )
     for pat in patterns:
         m = re.search(pat, lower)
@@ -70,10 +69,17 @@ def _requested_result_count(lower: str) -> int | None:
     return None
 
 
-def _is_listing_request(lower: str) -> bool:
-    if not re.search(r"\b(?:show(?:\s+me)?|find|give(?:\s+me)?|list|get)\b", lower):
-        return False
-    return not re.search(r"\b(?:purchase|under|budget|ceiling|compare)\b", lower)
+def _approval_target(lower: str) -> str:
+    m = re.search(
+        r"(?:to|for)\s+(?:the\s+)?(procurement(?:\s+manager)?|cfo|finance(?:\s+director)?|manager)",
+        lower,
+    )
+    if not m:
+        return "procurement_manager"
+    token = re.sub(r"\s+", "_", m.group(1).strip())
+    if token == "procurement":
+        return "procurement_manager"
+    return token
 
 
 def heuristic_parse(text: str) -> Entities:
@@ -90,12 +96,13 @@ def heuristic_parse(text: str) -> Entities:
         if intent == "vendor_comparison" and "laptop" in lower:
             intent = "procurement"
 
-    listing = _is_listing_request(lower)
     qty = 1
-    m = re.search(r"(\d+)\s*(?:x\s*)?(laptops?|units?|seats?|licenses?|notebooks?)", lower)
-    if m and not listing:
+    for m in re.finditer(r"(\d+)\s*(?:x\s*)?(laptops?|units?|seats?|licenses?|notebooks?)", lower):
+        rest = lower[m.end():]
+        if re.match(r"\s*(?:suppliers?|vendors?)", rest):
+            continue
         qty = int(m.group(1))
-    elif intent == "vendor_comparison":
+    if qty == 1 and intent == "vendor_comparison":
         qty = 1
 
     budget = 0.0
@@ -106,7 +113,7 @@ def heuristic_parse(text: str) -> Entities:
     )
     usd = re.search(r"\$\s*([\d,]+(?:\.\d+)?)\s*(k|thousand)?", lower)
     under = re.search(
-        r"(?:under|below|within|ceiling(?:\s+of)?|budget(?:\s+of)?)\s*(?:pkr|rs\.?|\$)?\s*([\d,]+(?:\.\d+)?)\s*(million|m|mn|lakh|k|thousand)?",
+        r"(?:under|below|within(?:\s+a)?|ceiling(?:\s+of)?|budget(?:\s+of)?|price\s+range\s+of|up\s*to|max(?:imum)?)\s*(?:pkr|rs\.?|\$)?\s*([\d,]+(?:\.\d+)?)\s*(million|m|mn|lakh|k|thousand)?",
         lower,
     )
     if pkr:
@@ -134,7 +141,7 @@ def heuristic_parse(text: str) -> Entities:
         budget=budget,
         currency=currency,
         suppliers_to_compare=n_sup,
-        approval_target="procurement_manager",
+        approval_target=_approval_target(lower),
         constraints=constraints,
         raw_request=raw,
     )
@@ -166,9 +173,13 @@ def _merge(llm: dict[str, Any], fallback: Entities) -> Entities:
     try:
         data["quantity"] = int(data["quantity"])
         data["budget"] = float(data["budget"])
-        data["suppliers_to_compare"] = int(data.get("suppliers_to_compare") or 3)
-        if fallback.suppliers_to_compare != 3:
-            data["suppliers_to_compare"] = fallback.suppliers_to_compare
+        explicit = _requested_result_count((fallback.raw_request or "").lower())
+        if explicit is not None:
+            data["suppliers_to_compare"] = max(1, min(int(explicit), 50))
+        else:
+            data["suppliers_to_compare"] = 3
+        if fallback.quantity and int(fallback.quantity) != 1:
+            data["quantity"] = int(fallback.quantity)
     except (TypeError, ValueError):
         pass
     return Entities.model_validate(data)

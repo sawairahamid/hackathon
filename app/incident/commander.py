@@ -30,8 +30,8 @@ def handle_incident(wid: str, step_id: str, result: ToolResult, attempt: int, ma
     if action == "REPLAN":
         trace.emit(wid, "REPLAN_STARTED", "Dynamically replanning workflow to recover", step_id=step_id)
         # Perform the actual replan
-        new_wid = replan_workflow(wid, step_id, iid, error_type)
-        trace.emit(wid, "REPLAN_COMPLETED", f"Replanned to new version: {new_wid}", step_id=step_id)
+        new_plan = replan_workflow(wid, step_id, iid, error_type, outputs={})
+        trace.emit(wid, "REPLAN_COMPLETED", f"Replanned to new version: {getattr(new_plan, 'title', wid)}", step_id=step_id)
         return "REPLAN"
 
     return action

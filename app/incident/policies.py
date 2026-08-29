@@ -15,10 +15,9 @@ def determine_recovery(error_type: str, severity: str, attempt: int, max_retries
         return "FALLBACK", "Falling back to bundled catalog after HTTP failure"
 
     if error_type in ("BUDGET_VIOLATION", "VALIDATION_FAILURE"):
-        # For validation failures, we should REPLAN if possible
-        if step_id == "s3":  # validation step
-            return "REPLAN", f"{error_type} detected at validation; replanning workflow"
-        return "ESCALATE", f"Cannot recover from {error_type} at this stage"
+        # Ranking/validation recovery is handled in-executor (self-correct / skip PO).
+        # Replanning here would re-run the failed step and can loop.
+        return "ESCALATE", f"Cannot recover from {error_type} at this stage — flagged for human review"
 
     if severity == "CRITICAL":
         return "ESCALATE", "Critical severity incident requires human intervention"

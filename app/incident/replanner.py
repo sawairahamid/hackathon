@@ -7,7 +7,7 @@ from app import trace
 from app.models import Plan
 
 
-def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, outputs: dict) -> Plan:
+def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, outputs: dict | None = None) -> Plan:
     """
     Mutates the current workflow plan to insert recovery steps.
     Returns the new Plan object.
@@ -71,11 +71,13 @@ def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, o
             "tool": "generate_purchase_order",
             "inputs": {
                 "entities": "$entities",
-                "ranking": f"${s2_replan['id']}.output"
+                "selected": f"${s2_replan['id']}.output.selected",
+                "ranking": f"${s2_replan['id']}.output",
+                "workflow_id": "$entities.extra.workflow_id",
             },
             "depends_on": [s3_replan["id"]],
-            "condition": {"type": "always"},
-            "on_fail": "retry",
+            "condition": {"type": "field_true", "step": s3_replan["id"], "field": "passed"},
+            "on_fail": "escalate",
             "max_retries": 2
         }
         
@@ -84,11 +86,14 @@ def replan_workflow(wid: str, step_id: str, incident_id: str, error_type: str, o
             "name": f"Request Approval (v{new_version})",
             "tool": "submit_for_approval",
             "inputs": {
+                "workflow_id": "$entities.extra.workflow_id",
                 "approver": "$entities.approval_target",
-                "po": f"${s4_replan['id']}.output"
+                "artifact_url": f"${s4_replan['id']}.output.url",
+                "po_number": f"${s4_replan['id']}.output.po_number",
+                "summary": f"${s2_replan['id']}.output.justification",
             },
             "depends_on": [s4_replan["id"]],
-            "condition": {"type": "always"},
+            "condition": {"type": "deps_ok"},
             "on_fail": "retry",
             "max_retries": 2
         }

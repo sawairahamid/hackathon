@@ -47,21 +47,142 @@ def test_parse_secondary_use_case():
 
 def test_parse_requested_supplier_counts():
     cases = [
-        ("Show me 3 suppliers", 3),
-        ("Show me 4 suppliers", 4),
-        ("Show me 5 suppliers", 5),
-        ("Show me 10 suppliers", 10),
-        ("Find 10 laptop suppliers", 10),
-        ("Give me 10 laptop suppliers", 10),
-        ("Show me 10 laptops", 10),
-        ("Find 5 laptops from suppliers", 5),
-        ("Show me 5 laptops from 5 suppliers", 5),
-        ("Give me 15 suppliers", 15),
-        ("Show me laptop suppliers", 3),
+        ("Show me 3 suppliers", 3, 1),
+        ("Show me 4 suppliers", 4, 1),
+        ("Show me 5 suppliers", 5, 1),
+        ("Show me 10 suppliers", 10, 1),
+        ("Find 10 laptop suppliers", 10, 1),
+        ("Give me 10 laptop suppliers", 10, 1),
+        ("Get me 6 vendors", 6, 1),
+        ("Give me 15 suppliers", 15, 1),
+        ("Show me laptop suppliers", 3, 1),
+        ("Compare 7 suppliers", 7, 1),
     ]
-    for text, n in cases:
+    for text, n, qty in cases:
         ent = heuristic_parse(text)
         assert ent.suppliers_to_compare == n, text
+        assert ent.quantity == qty, text
+
+
+def test_parse_quantity_separate_from_suppliers():
+    five = heuristic_parse("Show me 5 laptops")
+    assert five.quantity == 5
+    assert five.suppliers_to_compare == 3
+    mixed = heuristic_parse(
+        "Create a purchase request for 50 laptops under PKR 10 million, compare 5 suppliers"
+    )
+    assert mixed.quantity == 50
+    assert mixed.suppliers_to_compare == 5
+    assert mixed.budget == 10_000_000
+    assert mixed.currency == "PKR"
+    ten = heuristic_parse("Show me 10 laptops")
+    assert ten.quantity == 10
+    assert ten.suppliers_to_compare == 3
+    mixed_order = heuristic_parse("Compare 10 laptop suppliers under PKR 10 million for 50 laptops")
+    assert mixed_order.quantity == 50
+    assert mixed_order.suppliers_to_compare == 10
+    assert mixed_order.budget == 10_000_000
+    mgr = heuristic_parse(
+        "Create a purchase request for 50 laptops under PKR 10 million, compare 5 suppliers, "
+        "identify the best option, prepare the PO, and send it to the procurement manager."
+    )
+    assert mgr.approval_target == "procurement_manager"
+
+
+def test_parse_price_range_and_from_suppliers():
+    ent = heuristic_parse("1 laptops in price range of 12M from 8 suppliers")
+    assert ent.quantity == 1
+    assert ent.budget == 12_000_000
+    assert ent.suppliers_to_compare == 8
+
+
+def test_fetch_limit_and_quantity_propagate():
+    for n, qty in ((3, 50), (5, 20), (10, 10)):
+        r = invoke(
+            "fetch_suppliers",
+            {
+                "item": "laptops",
+                "quantity": qty,
+                "limit": n,
+                "currency": "PKR",
+                "chaos": {"use_fallback": True},
+            },
+        )
+        assert r.ok, r.error
+        quotes = r.data["quotes"]
+        assert len(quotes) == n
+        assert r.data["limit"] == n
+        assert len({q["id"] for q in quotes}) == n
+        assert all(q["quantity"] == qty for q in quotes)
+        assert all(q["total"] == q["unit_price"] * qty for q in quotes)
+
+
+def test_dynamic_supplier_count_end_to_end():
+    for n, wid in ((3, "wf_n3"), (5, "wf_n5"), (10, "wf_n10")):
+        text = (
+            f"Create a purchase request for 50 laptops under PKR 10 million, "
+            f"compare {n} suppliers, identify the best option, prepare the purchase order, "
+            f"and send it for approval."
+        )
+        status = _run(text, wid)
+        assert status == "pending_approval"
+        steps = {s["step_id"]: s for s in trace.list_steps(wid)}
+        fetch = json.loads(steps["s1"]["output_json"])
+        assert len(fetch["quotes"]) == n
+        ranking = json.loads(steps["s2"]["output_json"])
+        shown = len(ranking.get("ranked") or []) + len(ranking.get("rejected") or [])
+        assert shown == n
+        po = json.loads(steps["s4"]["output_json"])
+        assert Path(po["path"]).exists()
+        assert po["line_items"][0]["qty"] == 50
+
+
+def test_quantity_propagates_to_po():
+    for qty, wid in ((20, "wf_q20"), (10, "wf_q10"), (5, "wf_q5")):
+        text = f"Create a purchase request for {qty} laptops under PKR 10 million, compare 3 suppliers."
+        status = _run(text, wid)
+        assert status == "pending_approval"
+        steps = {s["step_id"]: s for s in trace.list_steps(wid)}
+        ranking = json.loads(steps["s2"]["output_json"])
+        assert ranking["quantity"] == qty
+        po = json.loads(steps["s4"]["output_json"])
+        assert po["line_items"][0]["qty"] == qty
+        assert po["grand_total"] == ranking["selected"]["unit_price"] * qty
+
+
+def test_low_budget_escalates_without_po():
+    status = _run(
+        "Create a purchase request for 50 laptops under PKR 1000, compare 3 suppliers, prepare the PO.",
+        "wf_lowbud",
+    )
+    assert status == "escalated"
+    row = trace.get_workflow("wf_lowbud")
+    assert row["status"] == "escalated"
+    steps = {s["step_id"]: s for s in trace.list_steps("wf_lowbud")}
+    assert steps["s2"]["status"] == "failed"
+    assert steps["s4"]["status"] == "skipped"
+    assert "s4" not in {s["step_id"] for s in trace.list_steps("wf_lowbud") if s["status"] == "done"}
+    events = [e["type"] for e in trace.list_events("wf_lowbud")]
+    assert "escalated" in events
+    report = row.get("report") or ""
+    assert "pending_approval" not in (row["status"] or "")
+    assert "Human decision: APPROVED" not in report
+
+
+def test_approval_rejection_does_not_complete_purchase():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    status = _run(PRIMARY, "wf_reject")
+    assert status == "pending_approval"
+    client = TestClient(app)
+    res = client.post("/api/workflows/wf_reject/approval", json={"decision": "reject", "note": "over spec"})
+    assert res.status_code == 200
+    assert res.json()["status"] == "rejected"
+    row = trace.get_workflow("wf_reject")
+    assert row["status"] == "rejected"
+    assert "successfully completed" not in (row.get("report") or "").lower()
+    assert "REJECTED" in (row.get("report") or "")
 
 
 def test_fetch_returns_requested_unique_quotes():
@@ -85,6 +206,7 @@ def test_rank_rejects_over_budget_and_picks_transparent_winner():
     assert result["selected"]["id"] == "balanced"
     assert result["weights"] == {"price": 0.5, "delivery": 0.3, "warranty": 0.2}
     assert "50%" in result["justification"] or "price" in result["justification"].lower()
+    assert "× 0.50" in (result["selected"]["scores"].get("breakdown") or "")
 
 
 def test_validation_catches_budget_breach_and_suggests_rerank():
@@ -102,7 +224,11 @@ def _run(text: str, wid: str, chaos: dict | None = None) -> str:
     ent, _ = parse_request(text)
     extra = dict(ent.extra or {})
     extra["workflow_id"] = wid
-    extra["chaos"] = chaos or ChaosConfig().model_dump()
+    cfg = dict(chaos or ChaosConfig().model_dump())
+    # Tests force a dead vendor URL; skip HTTP retries unless the scenario is injecting chaos.
+    if not any(cfg.get(k) for k in ("force_timeout", "force_malformed", "force_over_budget", "force_price_shock", "force_multi_failure")):
+        cfg.setdefault("use_fallback", True)
+    extra["chaos"] = cfg
     ent.extra = extra
     plan = template_plan(ent)
     trace.create_workflow(wid, text, extra["chaos"])

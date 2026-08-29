@@ -45,15 +45,17 @@ def validate(
             "suggested_exclude_ids": [],
             "action": "escalate",
         }
+    add("selection_present", True, f"{selected.get('name') or selected.get('id')}")
 
     total = float(selected.get("total") or 0)
-    # Check default policy budget as well as intent budget
+    # Check default policy budget as well as intent budget (skip local ceiling when none was stated)
     policy_ok, policy_msg = default_policy_engine.evaluate_budget(ent.currency, total)
-    local_ok = total <= float(ent.budget) + 1e-6
+    user_budget = float(ent.budget or 0)
+    local_ok = True if user_budget <= 0 else total <= user_budget + 1e-6
     add(
         "budget_compliance",
         policy_ok and local_ok,
-        f"{total:,.0f} <= {ent.budget:,.0f} {ent.currency}. Policy: {policy_msg}",
+        f"{total:,.0f} <= {user_budget:,.0f} {ent.currency}. Policy: {policy_msg}",
     )
     
     # Check supplier policy
@@ -90,7 +92,8 @@ def validate(
     action = "continue"
     exclude: list[str] = []
     if not passed:
-        if sid and not checks[0]["ok"]:
+        failed = {c["name"] for c in checks if not c.get("ok")}
+        if sid and failed & {"budget_compliance", "business_policy_compliance", "quantity_correctness"}:
             exclude = [str(sid)]
             action = "retry_rank"
         else:

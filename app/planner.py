@@ -159,7 +159,8 @@ def _coerce_plan(raw: dict[str, Any], fallback: Plan) -> Plan | None:
             )
         )
     names = {s.tool for s in steps}
-    if "fetch_suppliers" not in names or "submit_for_approval" not in names:
+    required = {"fetch_suppliers", "rank_suppliers", "validate_selection", "generate_purchase_order", "submit_for_approval"}
+    if not required.issubset(names):
         return None
     return Plan(
         title=raw.get("title") or fallback.title,

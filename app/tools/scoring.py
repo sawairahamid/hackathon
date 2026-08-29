@@ -33,8 +33,10 @@ def rank(
         rec["total"] = rec.get("total") or rec.get("unit_price", 0) * quantity
         
         pol_budget_ok, pol_budget_msg = default_policy_engine.evaluate_budget(currency, rec["total"])
-        local_budget_ok = rec["total"] <= budget
+        local_budget_ok = True if not budget or float(budget) <= 0 else rec["total"] <= float(budget)
         rec["meets_budget"] = pol_budget_ok and local_budget_ok
+        rec["local_budget_ok"] = local_budget_ok
+        rec["policy_budget_ok"] = pol_budget_ok
         
         pol_sup_ok, pol_sup_msg = default_policy_engine.evaluate_supplier(rec)
         rec["meets_policy"] = pol_sup_ok
@@ -65,16 +67,24 @@ def rank(
             "delivery": round(del_s, 1),
             "warranty": round(war_s, 1),
             "weighted": round(weighted, 1),
+            "breakdown": (
+                f"{round(price_s, 1)} × 0.50 + {round(del_s, 1)} × 0.30 + "
+                f"{round(war_s, 1)} × 0.20 = {round(weighted, 1)}"
+            ),
         }
         if q.get("excluded"):
             rejected.append({"id": q["id"], "name": q.get("name"), "reason": "Excluded after validation self-correct", "total": q["total"], "scores": q["scores"]})
             continue
         if not q["meets_budget"]:
+            if not q.get("local_budget_ok", True):
+                reason = f"Total {_money(q['total'], currency)} exceeds requested budget {_money(budget, currency)}"
+            else:
+                reason = f"Total {_money(q['total'], currency)} exceeds company policy maximum"
             rejected.append(
                 {
                     "id": q["id"],
                     "name": q.get("name"),
-                    "reason": f"Total {_money(q['total'], currency)} exceeds budget {_money(budget, currency)} or policy maximum",
+                    "reason": reason,
                     "total": q["total"],
                     "scores": q["scores"]
                 }
@@ -102,6 +112,7 @@ def rank(
             f"(price {weights['price']*100:.0f}% / delivery {weights['delivery']*100:.0f}% / "
             f"warranty {weights['warranty']*100:.0f}%) with a weighted score of "
             f"{selected['scores']['weighted']}. "
+            f"Score math: {selected['scores'].get('breakdown')}. "
             f"Unit price {_money(selected['unit_price'], currency)}, "
             f"total {_money(selected['total'], currency)} for {quantity} units, "
             f"{selected.get('delivery_days')} day delivery, "
@@ -148,5 +159,6 @@ def rank_suppliers(
         tool="rank_suppliers",
         data=data,
         error=None if ok else "No supplier met the budget ceiling",
+        error_type=None if ok else "BUDGET_VIOLATION",
         source="local",
     )

@@ -47,14 +47,35 @@ def build_report(
     budget = _money(entities.get("budget") or 0, currency)
     status_label = (status or "").replace("_", " ")
 
+    actual_n = len(ranking.get("ranked") or []) + len(rejected)
+    asked_n = entities.get("suppliers_to_compare", 3)
+    compared_line = f"{actual_n} suppliers compared"
+    if asked_n and actual_n and actual_n != asked_n:
+        compared_line += f" (asked for {asked_n})"
+    if selected and po:
+        workflow = (
+            "Workflow: request parsed, suppliers retrieved, budget filter applied, suppliers scored, "
+            "best option selected, purchase order generated, validated, and sent for human approval."
+        )
+    elif selected:
+        workflow = (
+            "Workflow: request parsed, suppliers retrieved, budget filter applied, and suppliers scored. "
+            "Purchase order was not issued."
+        )
+    else:
+        workflow = (
+            "Workflow: request parsed, suppliers retrieved, and budget filter applied. "
+            "No valid supplier — escalated for human review."
+        )
     blocks: list[str] = [
         f"Status: {status_label}.",
         f"Request: {request.strip()}",
         (
             f"What was asked: {qty} × {item} under a {budget} ceiling. "
-            f"{entities.get('suppliers_to_compare', 3)} suppliers compared. "
+            f"{compared_line}. "
             f"{entities.get('approval_target', 'procurement_manager')} must approve spend — the agent cannot."
         ),
+        workflow,
     ]
 
     if selected:
@@ -62,6 +83,14 @@ def build_report(
         w_price = weights.get("price", 0.5) * 100
         w_del = weights.get("delivery", 0.3) * 100
         w_war = weights.get("warranty", 0.2) * 100
+        compared = [r.get("name") or r.get("id") for r in (ranking.get("ranked") or [])]
+        compared += [r.get("name") or r.get("id") for r in rejected]
+        seen = []
+        for n in compared:
+            if n and n not in seen:
+                seen.append(n)
+        if seen:
+            blocks.append("Suppliers compared: " + ", ".join(str(x) for x in seen) + ".")
         decision = (
             f"Decision: {selected.get('name')} was selected at {_money(selected.get('total') or 0, currency)}. "
             f"Unit price {_money(selected.get('unit_price') or 0, currency)}. "
@@ -69,6 +98,8 @@ def build_report(
             f"Weighted score {scores.get('weighted', '—')} "
             f"(price {w_price:.0f}% / delivery {w_del:.0f}% / warranty {w_war:.0f}%)."
         )
+        if scores.get("breakdown"):
+            decision += f" Score math: {scores['breakdown']}."
         just = (ranking.get("justification") or "").strip()
         if just:
             decision += " " + just.rstrip(".") + "."
@@ -87,16 +118,27 @@ def build_report(
     if checks:
         failed = [c for c in checks if not c.get("ok")]
         if failed:
-            detail = "; ".join(f"{c.get('name')}: {c.get('detail')}" for c in failed)
+            detail = "; ".join(
+                f"{c.get('name')}: {c.get('detail')}" for c in failed
+            )
             blocks.append(f"Validation: Checks failed. {detail}")
         else:
-            blocks.append("Validation: Required checks passed. Budget, quantity, and required fields lined up.")
+            labels = []
+            for c in checks:
+                name = (c.get("name") or "").replace("_", " ")
+                labels.append(("OK " if c.get("ok") else "FAIL ") + name)
+            blocks.append("Validation: " + "; ".join(labels) + ".")
 
     if po:
-        blocks.append(
-            f"Purchase order: {po.get('po_number', '—')} for "
-            f"{_money(po.get('grand_total') or selected.get('total') or 0, currency)}."
+        po_ref = po.get("po_number", "—")
+        url = po.get("url")
+        po_line = (
+            f"Purchase order: {po_ref} for "
+            f"{_money(po.get('grand_total') or selected.get('total') or 0, currency)}"
         )
+        if url:
+            po_line += f". Artifact: {url}"
+        blocks.append(po_line + ".")
 
     if approval:
         appr_status = (approval.get("status") or status or "").replace("_", " ")
